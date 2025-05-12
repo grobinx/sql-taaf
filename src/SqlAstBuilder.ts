@@ -529,7 +529,7 @@ export class SqlAstBuilder {
             components.push(this.prepareComponent("NAME", [alias]));
         }
         else {
-            // pierwszy id od końca to alias kolumny, w większości baz danych tak to działa
+            // pierwszy identifier od końca to alias kolumny, w większości baz danych tak to działa
             for (let i = expressionTokens.length - 1; i >= 0; i--) {
                 const token = expressionTokens[i];
                 if (token.type === "identifier") {
@@ -783,6 +783,7 @@ export class SqlAstBuilder {
 
         // Konsumuj tokeny aż do napotkania przecinka lub końca
         const sourceTokens = this.consumeUntil(["ON", "USING"]);
+        let alias: AstComponent | null = null;
 
         if (sourceTokens.length > 0 && sourceTokens[sourceTokens.length - 1].value === ")") {
             sourceTokens.pop();
@@ -793,7 +794,8 @@ export class SqlAstBuilder {
 
         if (sourceTokens.length > 1 && sourceTokens[sourceTokens.length - 1].type === "identifier") {
             const identifierToken = sourceTokens[sourceTokens.length - 1];
-            components.unshift(this.prepareComponent("NAME", [identifierToken]));
+            alias = this.prepareComponent("NAME", [identifierToken]);
+            components.unshift(alias);
             sourceTokens.pop();
             // Sprawdź, czy przed aliasem nie ma słowa kluczowego "AS"
             if (sourceTokens.length > 1 && sourceTokens[sourceTokens.length - 1].value.toLowerCase() === "AS") {
@@ -840,6 +842,9 @@ export class SqlAstBuilder {
                         this.consumeToken(); // Konsumuj otwierający nawias
                         const statement = this.consumeUntil([")"]);
                         components.unshift(this.prepareComponent("VALUES", statement));
+                    }
+                    if (!alias) {
+                        components.unshift(this.prepareComponent("NAME", [identifierTokens[identifierTokens.length - 1]]));
                     }
                     components.unshift(this.prepareComponent("IDENTIFIER", identifierTokens));
                 }

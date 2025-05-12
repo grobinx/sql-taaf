@@ -134,15 +134,15 @@ coalesce(t.spcname, (select spcname from pg_database d join pg_tablespace t on t
 `analyzer.findUsedRelations()`
 ```json
 [
-  { "parts": ["pg_catalog", "pg_description"], "alias": "d", "component": { /* ... */ } },
-  { "parts": ["pg_catalog", "pg_tablespace"], "alias": "t", "component": { /* ... */ } },
-  { "parts": ["pg_catalog", "aclexplode"], "alias": "g", "component": { /* ... */ } },
-  { "parts": ["pg_catalog", "pg_inherits"], "alias": "i", "component": { /* ... */ } },
-  { "parts": ["pg_catalog", "pg_class"], "alias": undefined, "component": { /* ... */ } },
-  { "parts": ["pg_catalog", "pg_class"], "alias": "c", "component": { /* ... */ } },
-  { "parts": ["pg_catalog", "pg_namespace"], "alias": "n", "component": { /* ... */ } },
-  { "parts": ["pg_catalog", "pg_tablespace"], "alias": "t", "component": { /* ... */ } },
-  { "parts": ["pg_catalog", "pg_database"], "alias": "d", "component": { /* ... */ } }
+  { "parts": ["pg_database"], "alias": "d" },
+  { "parts": ["pg_tablespace"], "alias": "t" },
+  { "parts": ["pg_catalog", "aclexplode"], "alias": "g" },
+  { "parts": ["pg_catalog", "pg_inherits"], "alias": "i" },
+  { "parts": ["pg_foreign_table"], "alias": "pg_foreign_table" },
+  { "parts": ["pg_catalog", "pg_class"], "alias": "c" },
+  { "parts": ["pg_catalog", "pg_namespace"], "alias": "n" },
+  { "parts": ["pg_catalog", "pg_tablespace"], "alias": "t" },
+  { "parts": ["pg_catalog", "pg_description"], "alias": "d" }
 ]
 ```
 `analyzer.ownerStatementColumns(1010)`
