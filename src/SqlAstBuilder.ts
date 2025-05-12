@@ -528,6 +528,16 @@ export class SqlAstBuilder {
         if (alias) {
             components.push(this.prepareComponent("NAME", [alias]));
         }
+        else {
+            // pierwszy id od końca to alias kolumny, w większości baz danych tak to działa
+            for (let i = expressionTokens.length - 1; i >= 0; i--) {
+                const token = expressionTokens[i];
+                if (token.type === "identifier") {
+                    components.push(this.prepareComponent("NAME", [token]));
+                    break; // Przerwij po znalezieniu pierwszego identyfikatora
+                }
+            }
+        }
 
         this.processLevel(components);
 

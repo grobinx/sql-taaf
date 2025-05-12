@@ -112,19 +112,19 @@ select schema_name, table_name, owner_name, table_space, description, accessible
 `analyzer.findDependencyAt(410)`
 ```json
 [
-  { "id": 103, "component": "JOIN TYPE", "tokens": [/* ... */] },
-  { "id": 97, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] },
-  { "id": 90, "component": "FROM", "tokens": [/* ... */], "components": [/* ... */] },
-  { "id": 88, "component": "STATEMENT", "tokens": [/* ... */], "components": [/* ... */] },
-  { "id": 86, "component": "EXPRESSION", "tokens": [/* ... */], "components": [/* ... */] },
-  { "id": 84, "component": "VALUES", "tokens": [/* ... */], "components": [/* ... */] },
-  { "id": 81, "component": "EXPRESSION", "tokens": [/* ... */], "components": [/* ... */] },
-  { "id": 64, "component": "COLUMN", "tokens": [/* ... */], "components": [/* ... */] },
-  { "id": 58, "component": "SELECT", "tokens": [/* ... */], "components": [/* ... */] },
-  { "id": 57, "component": "STATEMENT", "tokens": [/* ... */], "components": [/* ... */] },
-  { "id": 55, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] },
-  { "id": 2, "component": "FROM", "tokens": [/* ... */], "components": [/* ... */] },
-  { "id": 371, "component": "STATEMENT", "tokens": [/* ... */], "components": [/* ... */] }
+  { "id": 102, "component": "IDENTIFIER", "tokens": ["..."] },
+  { "id": 97, "component": "SOURCE", "tokens": ["..."], "components": ["..."] },
+  { "id": 90, "component": "FROM", "tokens": ["..."], "components": ["..."] },
+  { "id": 88, "component": "STATEMENT", "tokens": ["..."], "components": ["..."] },
+  { "id": 86, "component": "EXPRESSION", "tokens": ["..."], "components": ["..."] },
+  { "id": 84, "component": "VALUES", "tokens": ["..."], "components": ["..."] },
+  { "id": 81, "component": "EXPRESSION", "tokens": ["..."], "components": ["..."] },
+  { "id": 64, "component": "COLUMN", "tokens": ["..."], "components": ["..."] },
+  { "id": 58, "component": "SELECT", "tokens": ["..."], "components": ["..."] },
+  { "id": 57, "component": "STATEMENT", "tokens": ["..."], "components": ["..."] },
+  { "id": 55, "component": "SOURCE", "tokens": ["..."], "components": ["..."] },
+  { "id": 2, "component": "FROM", "tokens": ["..."], "components": ["..."] },
+  { "id": 374, "component": "STATEMENT", "tokens": ["..."], "components": ["..."] }
 ]
 ```
 `analyzer.findUsedRelations()`
@@ -139,6 +139,19 @@ select schema_name, table_name, owner_name, table_space, description, accessible
   { "parts": ["pg_catalog", "pg_namespace"], "alias": "n", "component": { /* ... */ } },
   { "parts": ["pg_catalog", "pg_tablespace"], "alias": "t", "component": { /* ... */ } },
   { "parts": ["pg_catalog", "pg_database"], "alias": "d", "component": { /* ... */ } }
+]
+```
+`analyzer.ownerStatementColumns(1010)`
+```json
+[
+  { "alias": "schema_name", "component": { /* ... */ } },
+  { "alias": "table_name", "component": { /* ... */ } },
+  { "alias": "owner_name", "component": { /* ... */ } },
+  { "alias": "table_space", "component": { /* ... */ } },
+  { "alias": "accessible", "component": { /* ... */ } },
+  { "alias": "description", "component": { /* ... */ } },
+  { "alias": "inheritance", "component": { /* ... */ } },
+  { "alias": "foreign_table", "component": { /* ... */ } }
 ]
 ```
 

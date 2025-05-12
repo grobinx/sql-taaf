@@ -4,8 +4,7 @@ import { SqlTokenizer } from '../SqlTokenizer';
 
 const parser = new SqlTokenizer();
 
-let sql = `
-with szkielet as (
+let sql = `with szkielet as (
 with all_date as (select * from generate_series('2019-08-31'::date, '2022-05-31'::date, '1 month') as dt),
 recursive all_blzs (ikzs, blzs, nazw, nmbr) as ( select * from (with tab_knf as (select ikzs, blzs, nazw, rynk from omn.knf where ikzs=any(array[102613, 102614, 102615, 102616, 102617, 102618, 102619])),
 tab_kdr as (select ikzs, blzs, nazw, min(nmbr) as nmbr from omn.kdr where ikzs=any(array[102613, 102614, 102615, 102616, 102617, 102618, 102619]) group by ikzs, blzs, nazw)
@@ -29,8 +28,7 @@ left join dane_umsz on s.akdmr=dane_umsz.akdmr and s.blzs=dane_umsz.blzs and s.i
 ORDER BY data
 `;
 
-// sql = `
-// select a.pid = pg_backend_pid() and (a.pid, b.pid), (select datname from pg_database where oid = a.datid) as database_name, 
+// sql = `select a.pid = pg_backend_pid() and (a.pid, b.pid), (select datname from pg_database where oid = a.datid) as database_name, 
 //                a.usename user_name, a.application_name, coalesce(case when a.client_hostname = '' then null else a.client_hostname end, a.client_addr::text)||':'||a.client_port client_host,
 //                a.backend_start, a.xact_start, query_start,
 //                a.wait_event_type, a.wait_event,
@@ -42,8 +40,7 @@ ORDER BY data
 //                join pg_stat_get_backend_idset() svrid on a.pid = pg_stat_get_backend_pid(svrid)
 // `;
 
-sql = `
-select schema_name, table_name, owner_name, table_space, description, accessible, inheritance, quote_ident(schema_name)||'.'||quote_ident(table_name) full_object_name, table_name object_name,
+sql = `select schema_name, table_name, owner_name, table_space, description, accessible, inheritance, quote_ident(schema_name)||'.'||quote_ident(table_name) full_object_name, table_name object_name,
        foreign_table
   from (select n.nspname as schema_name, c.relname as table_name, pg_catalog.pg_get_userbyid(c.relowner) as owner_name, 
                coalesce(t.spcname, (select spcname from pg_database d join pg_tablespace t on t.oid = d.dattablespace where d.datname = case when n.nspname in ('pg_catalog', 'information_schema') then 'postgres' else current_database() end)) as table_space,
@@ -75,6 +72,7 @@ if (ast) {
     const analyzer = new SqlAnalyzer(ast);
     console.log(analyzer.findDependencyAt(410));
     console.log(analyzer.findUsedRelations());
+    console.log(analyzer.ownerStatementColumns(1010));
 
     // const formatter = new SqlFormatter();
     // console.log(formatter.format(tokens));
