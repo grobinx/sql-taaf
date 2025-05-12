@@ -82,8 +82,24 @@ if (ast) {
     console.error('AST is null. Cannot analyze.');
 }
 
+function removeTokensFromAst(ast: any): any {
+    if (Array.isArray(ast)) {
+        return ast.map(removeTokensFromAst);
+    } else if (typeof ast === 'object' && ast !== null) {
+        const { tokens, ...rest } = ast; // Usuń właściwość `tokens`
+        const newAst = { ...rest };
+        for (const key in newAst) {
+            if (newAst.hasOwnProperty(key)) {
+                newAst[key] = removeTokensFromAst(newAst[key]); // Rekurencyjnie przetwarzaj poddrzewa
+            }
+        }
+        return newAst;
+    }
+    return ast; // Zwróć wartość, jeśli nie jest obiektem ani tablicą
+}
+
 console.log(ast);
 fs.writeFileSync('doc/tokens.json', JSON.stringify(tokens, null, 2));
-fs.writeFileSync('doc/ast.json', JSON.stringify(ast, null, 2));
+fs.writeFileSync('doc/ast.json', JSON.stringify(removeTokensFromAst(ast), null, 2));
 
 console.log('------------------');
