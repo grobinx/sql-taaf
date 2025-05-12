@@ -109,6 +109,10 @@ select schema_name, table_name, owner_name, table_space, description, accessible
  where (schema_name = 'orbada' or (schema_name = any (current_schemas(false)) and 'orbada' = current_schema() and schema_name <> 'public'))
  order by schema_name, table_name
 ```
+## Output
+- [Tokens JSON](doc/tokens.json)
+- [AST JSON](doc/ast.json)
+
 `analyzer.findDependencyAt(410)`
 ```sql
 coalesce(t.spcname, (select spcname from pg_database d join pg_tablespace t on t.oid = d.dattablespace where d.datname = case when

@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { SqlAnalyzer } from '../SqlAnalyzer';
 import { SqlAstBuilder } from '../SqlAstBuilder';
 import { SqlTokenizer } from '../SqlTokenizer';
@@ -82,6 +83,7 @@ if (ast) {
 }
 
 console.log(ast);
-//fs.writeFileSync('result.json', JSON.stringify(result?.root.components, null, 2));
+fs.writeFileSync('doc/tokens.json', JSON.stringify(tokens, null, 2));
+fs.writeFileSync('doc/ast.json', JSON.stringify(ast, null, 2));
 
 console.log('------------------');
