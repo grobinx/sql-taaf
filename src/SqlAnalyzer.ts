@@ -110,4 +110,32 @@ export class SqlAnalyzer {
         return result;
     }
 
+    findRelationAliasAt(name: string, index: number): Relation | undefined {
+        const stack = this.findDependencyAt(index);
+
+        for (const component of stack) {
+            if (component.component !== "STATEMENT") {
+                continue;
+            }
+            const statement = component;
+            const from = statement.components?.find(c => c.component === "FROM");
+            if (from) {
+                const source = from.components?.find(c => c.component === "SOURCE");
+                if (source) {
+                    const relation = source.components?.find(c => c.component === "IDENTIFIER");
+                    const alias = source.components?.find(c => c.component === "NAME");
+                    if (relation && alias && alias.tokens[0].value === name) {
+                        return {
+                            parts: relation.tokens.filter(t => t.type === "identifier").map(t => t.value),
+                            alias: alias.tokens[0].value,
+                            component: relation
+                        };
+                    }
+                }
+            }
+        }
+
+        return undefined;
+    }
+
 }

@@ -111,6 +111,10 @@ select schema_name, table_name, owner_name, table_space, description, accessible
 ```
 `analyzer.findDependencyAt(410)`
 ```json
+```sql
+coalesce(t.spcname, (select spcname from pg_database d join pg_tablespace t on t.oid = d.dattablespace where d.datname = case when
+                                                            ^
+```
 [
   { "id": 102, "component": "IDENTIFIER", "tokens": ["..."] },
   { "id": 97, "component": "SOURCE", "tokens": ["..."], "components": ["..."] },
@@ -143,6 +147,10 @@ select schema_name, table_name, owner_name, table_space, description, accessible
 ```
 `analyzer.ownerStatementColumns(1010)`
 ```json
+```sql
+when pg_catalog.has_table_privilege(c.oid, 'SELECT, INSERT, UPDATE, DELETE') then 'GRANTED' 
+                                             ^
+```
 [
   { "alias": "schema_name", "component": { /* ... */ } },
   { "alias": "table_name", "component": { /* ... */ } },
@@ -153,6 +161,14 @@ select schema_name, table_name, owner_name, table_space, description, accessible
   { "alias": "inheritance", "component": { /* ... */ } },
   { "alias": "foreign_table", "component": { /* ... */ } }
 ]
+```
+`analyzer.findRelationAliasAt('c', 755)`
+```sql
+when (select true from pg_catalog.aclexplode(c.relacl) g where grantee = 0 limit 1) then 'PUBLIC'
+                                              ^
+```
+```json
+{ "parts": ["pg_catalog", "pg_class"], "alias": "c", "component": { /* ... */ } }
 ```
 
 ## Requirements

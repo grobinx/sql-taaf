@@ -73,6 +73,7 @@ if (ast) {
     console.log(analyzer.findDependencyAt(410));
     console.log(analyzer.findUsedRelations());
     console.log(analyzer.ownerStatementColumns(1010));
+    console.log(analyzer.findRelationAliasAt('c', 755));
 
     // const formatter = new SqlFormatter();
     // console.log(formatter.format(tokens));
