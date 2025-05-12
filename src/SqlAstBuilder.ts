@@ -792,7 +792,10 @@ export class SqlAstBuilder {
             components.push(this.prepareComponent("FIELDS", declarationTokens));
         }
 
-        if (sourceTokens.length > 1 && sourceTokens[sourceTokens.length - 1].type === "identifier") {
+        if (sourceTokens.length > 1 && 
+            sourceTokens[sourceTokens.length - 1].type === "identifier" && 
+            sourceTokens[sourceTokens.length - 2].type === "identifier"
+        ) {
             const identifierToken = sourceTokens[sourceTokens.length - 1];
             alias = this.prepareComponent("NAME", [identifierToken]);
             components.unshift(alias);
