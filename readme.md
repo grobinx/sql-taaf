@@ -82,6 +82,66 @@ if (ast) {
 }
 ```
 
+## Examples and results
+----
+```sql
+select schema_name, table_name, owner_name, table_space, description, accessible, inheritance, quote_ident(schema_name)||'.'||quote_ident(table_name) full_object_name, table_name object_name,
+       foreign_table
+  from (select n.nspname as schema_name, c.relname as table_name, pg_catalog.pg_get_userbyid(c.relowner) as owner_name, 
+               coalesce(t.spcname, (select spcname from pg_database d join pg_tablespace t on t.oid = d.dattablespace where d.datname = case when n.nspname in ('pg_catalog', 'information_schema') then 'postgres' else current_database() end)) as table_space,
+               case
+                 when pg_catalog.pg_has_role(c.relowner, 'USAGE') then 'USAGE'
+                 when (select true from pg_catalog.aclexplode(c.relacl) g where grantee = 0 limit 1) then 'PUBLIC'
+                 --when pg_catalog.has_table_privilege('public', c.oid, 'SELECT, INSERT, UPDATE, DELETE, REFERENCES') then 'BY PUBLIC ROLE' 
+                 when pg_catalog.has_table_privilege(c.oid, 'SELECT, INSERT, UPDATE, DELETE') then 'GRANTED' 
+                 when pg_catalog.has_any_column_privilege(c.oid, 'SELECT, INSERT, UPDATE') then 'COLUMN'
+               else 'NO' end accessible,
+               d.description,
+               (select 'inherits' from pg_catalog.pg_inherits i where i.inhrelid = c.oid union all select 'inherited' from pg_catalog.pg_inherits i where i.inhparent = c.oid limit 1) inheritance
+              ,case c.relkind when 'f'::"char" then 
+                 (select coalesce(coalesce(coalesce(substring(ftoptions::varchar from '[{,]schema=([#$\w]+)'), substring(ftoptions::varchar from '[{,]schema_name=([#$\w]+)'))||'.', '')||coalesce(substring(ftoptions::varchar from '[{,"]table=(([#$\w]+)|\(.+\))[",}]'), substring(ftoptions::varchar from '[{,"]table_name=(([#$\w]+)|\(.+\))[",}]')), '') from pg_foreign_table f /*join pg_foreign_server s on f.ftserver = s.oid*/ where f.ftrelid = c.oid)
+               end foreign_table
+          from pg_catalog.pg_class c
+               left join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+               left join pg_catalog.pg_tablespace t on t.oid = c.reltablespace
+               left join pg_catalog.pg_description d on d.classoid = 'pg_class'::regclass and d.objoid = c.oid and d.objsubid = 0
+         where c.relkind in ('r'::"char", 'f'::"char", 'p'::"char")) t
+ where (schema_name = 'orbada' or (schema_name = any (current_schemas(false)) and 'orbada' = current_schema() and schema_name <> 'public'))
+ order by schema_name, table_name
+```
+`analyzer.findDependencyAt(410)`
+```json
+[
+  { "id": 103, "component": "JOIN TYPE", "tokens": [/* ... */] },
+  { "id": 97, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] },
+  { "id": 90, "component": "FROM", "tokens": [/* ... */], "components": [/* ... */] },
+  { "id": 88, "component": "STATEMENT", "tokens": [/* ... */], "components": [/* ... */] },
+  { "id": 86, "component": "EXPRESSION", "tokens": [/* ... */], "components": [/* ... */] },
+  { "id": 84, "component": "VALUES", "tokens": [/* ... */], "components": [/* ... */] },
+  { "id": 81, "component": "EXPRESSION", "tokens": [/* ... */], "components": [/* ... */] },
+  { "id": 64, "component": "COLUMN", "tokens": [/* ... */], "components": [/* ... */] },
+  { "id": 58, "component": "SELECT", "tokens": [/* ... */], "components": [/* ... */] },
+  { "id": 57, "component": "STATEMENT", "tokens": [/* ... */], "components": [/* ... */] },
+  { "id": 55, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] },
+  { "id": 2, "component": "FROM", "tokens": [/* ... */], "components": [/* ... */] },
+  { "id": 371, "component": "STATEMENT", "tokens": [/* ... */], "components": [/* ... */] }
+]
+```
+`analyzer.findUsedRelations()`
+```json
+[
+  { "parts": ["pg_catalog", "pg_description"], "alias": "d", "component": { /* ... */ } },
+  { "parts": ["pg_catalog", "pg_tablespace"], "alias": "t", "component": { /* ... */ } },
+  { "parts": ["pg_catalog", "aclexplode"], "alias": "g", "component": { /* ... */ } },
+  { "parts": ["pg_catalog", "pg_inherits"], "alias": "i", "component": { /* ... */ } },
+  { "parts": ["pg_catalog", "pg_class"], "alias": undefined, "component": { /* ... */ } },
+  { "parts": ["pg_catalog", "pg_class"], "alias": "c", "component": { /* ... */ } },
+  { "parts": ["pg_catalog", "pg_namespace"], "alias": "n", "component": { /* ... */ } },
+  { "parts": ["pg_catalog", "pg_tablespace"], "alias": "t", "component": { /* ... */ } },
+  { "parts": ["pg_catalog", "pg_database"], "alias": "d", "component": { /* ... */ } }
+]
+```
+
 ## Requirements
 - Node.js (version 20 or newer)
 - Installed dependencies from the `package.json` file
