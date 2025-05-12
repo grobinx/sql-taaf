@@ -104,9 +104,15 @@ export class SqlTokenizer {
             // Handle string literals
             if (inString) {
                 buffer += char;
+                if (char === inString && nextChar === inString) {
+                    // Escape sequence for double quotes or single quotes
+                    buffer += nextChar;
+                    i++; // Skip the escaped character
+                    continue;
+                }
                 if (char === inString) {
                     // End of string literal
-                    tokens.push(this.createToken('string', buffer));
+                    tokens.push(this.createToken(this.getTokenType(buffer), buffer));
                     buffer = '';
                     inString = null;
                 }

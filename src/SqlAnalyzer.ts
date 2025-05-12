@@ -85,7 +85,7 @@ export class SqlAnalyzer {
                                 const parts = relation.tokens.filter(t => t.type === "identifier").map(t => t.value);
                                 let columns: Column[] | undefined;
                                 if (parts.length === 1) {
-                                    columns = this.findWithColumns(statement, parts[0]);
+                                    columns = this.findCteColumns(statement, parts[0]);
                                 }
                                 relations.push({
                                     parts: parts,
@@ -149,7 +149,7 @@ export class SqlAnalyzer {
      * @param alias 
      * @returns 
      */
-    findWithColumns(ownerStatement: AstComponent, alias: string): Column[] | undefined {
+    findCteColumns(ownerStatement: AstComponent, alias: string): Column[] | undefined {
         const withComponent = ownerStatement.components?.find(c => c.component === "WITH");
         if (withComponent) {
             const ctes = withComponent.components?.filter(c => c.component === "CTE");
@@ -197,11 +197,51 @@ export class SqlAnalyzer {
     }
 
     /**
+     * Finds the relation columns in the given owner statement with the given alias if relation is a statement.
+     * This is internal function, but...
+     * 
+     * @param ownerStatement 
+     * @param alias 
+     * @returns 
+     */
+    findSourceColumns(ownerStatement: AstComponent, alias: string): Column[] | undefined {
+        const from = ownerStatement.components?.find(c => c.component === "FROM");
+        if (from) {
+            const sources = from.components?.filter(c => c.component === "SOURCE");
+            if (sources) {
+                for (const source of sources) {
+                    const name = source.components?.find(c => c.component === "NAME");
+                    if (name && name.tokens[0].value === alias) {
+                        const statement = source.components?.find(c => c.component === "STATEMENT");
+                        if (statement) {
+                            const select = statement.components?.find(c => c.component === "SELECT");
+                            if (select) {
+                                const columns: Column[] = [];
+                                select.components?.forEach(c => {
+                                    if (c.component === "COLUMN") {
+                                        const name = c.components?.find(c => c.component === "NAME");
+                                        const column: Column = {
+                                            alias: name ? name.tokens[0].value : undefined,
+                                            component: c
+                                        };
+                                        columns.push(column);
+                                    }
+                                });
+                                return columns;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Finds the relation alias at the given name and index.
      * 
      * @param name - The name of the relation alias.
      * @param index - The index of the token in the SQL statement.
-     * @returns The relation alias or undefined if not found.
+     * @returns The relation or undefined if not found.
      */
     findRelationAliasAt(name: string, index: number): Relation | undefined {
         const stack = this.findDependencyAt(index);
@@ -221,7 +261,10 @@ export class SqlAnalyzer {
                         const parts = relation.tokens.filter(t => t.type === "identifier").map(t => t.value);
                         let columns: Column[] | undefined;
                         if (parts.length === 1) {
-                            columns = this.findWithColumns(statement, parts[0]);
+                            columns = this.findCteColumns(statement, parts[0]);
+                            if (!columns) {
+                                columns = this.findSourceColumns(statement, parts[0]);
+                            }
                         }
                         return {
                             parts: parts,
