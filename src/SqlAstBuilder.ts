@@ -794,7 +794,7 @@ export class SqlAstBuilder {
 
         if (sourceTokens.length > 1 && 
             sourceTokens[sourceTokens.length - 1].type === "identifier" && 
-            sourceTokens[sourceTokens.length - 2].type === "identifier"
+            sourceTokens[sourceTokens.length - 2].value !== "."
         ) {
             const identifierToken = sourceTokens[sourceTokens.length - 1];
             alias = this.prepareComponent("NAME", [identifierToken]);

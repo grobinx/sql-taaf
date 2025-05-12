@@ -66,6 +66,22 @@ sql = `select schema_name, table_name, owner_name, table_space, description, acc
  order by schema_name, table_name
 `
 
+sql = `select schema_name, table_name, ns.nspname function_schema_name, p.proname function_name, pg_get_function_arguments(p.oid) function_arguments,
+       array_to_string(array(select tgname from pg_catalog.pg_trigger t where f.foid = t.tgfoid and f.coid = t.tgrelid), ', ') triggers,
+       p.proname||'('||coalesce(pg_get_function_identity_arguments(p.oid), '')||')' full_function_name,
+       p.proname||'('||coalesce(pg_get_function_identity_arguments(p.oid), '')||')' object_name
+  from (select schema_name, table_name, foid, coid
+          from (select distinct ns.nspname schema_name, c.relname table_name, t.tgfoid foid, c.oid coid
+                  from pg_catalog.pg_trigger t
+                       join pg_catalog.pg_class c on c.oid = t.tgrelid
+                       join pg_catalog.pg_namespace ns on ns.oid = c.relnamespace
+                 where not t.tgisinternal
+                   and not pg_is_other_temp_schema(ns.oid)) t) f
+       join pg_catalog.pg_proc p on p.oid = f.foid
+       join pg_catalog.pg_namespace ns on ns.oid = p.pronamespace
+ order by function_name
+`
+
 const tokens = parser.parse(sql);
 const ast = new SqlAstBuilder().build(tokens);
 
@@ -74,7 +90,7 @@ if (ast) {
     console.log(analyzer.findDependencyAt(410));
     console.log(analyzer.findUsedRelations());
     console.log(analyzer.ownerStatementColumns(1010));
-    console.log(analyzer.findRelationAliasAt('c', 755));
+    console.log(analyzer.findRelationAliasAt('f', 224));
 
     // const formatter = new SqlFormatter();
     // console.log(formatter.format(tokens));
