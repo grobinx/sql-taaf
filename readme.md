@@ -3,7 +3,7 @@
 ## Description
 SQL Analyzer is a tool designed for analyzing SQL queries. The package enables parsing SQL queries, building an Abstract Syntax Tree (AST), and analyzing dependencies and relations used in queries.
 
-The project was created for the DBORG project (not yet released) with the support of GitHub Copilot.
+The project was created for the DBORG project (the younger brother of ORBADA available on sf.net) (not yet released) with the support of GitHub Copilot.
 
 ## Classes
 
