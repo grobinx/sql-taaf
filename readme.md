@@ -25,13 +25,13 @@ The project was created for the DBORG project (not yet released) with the suppor
 ### SqlAstBuilder
 - **Description**: A class that builds an Abstract Syntax Tree (AST) based on SQL tokens.
 - **Features**:
-- Creates a tree structure representing the SQL query.
-- Currently supports only SELECT statements.
-- Divides the query into parts using standard-compliant keywords at a minimal level required to find basic information such as columns, relations, and subqueries.
-- Does not validate the correctness of the query.
-- Enables further syntactic analysis of queries.
-- The `build` function does not throw exceptions; if any errors occur, you can find them using `getErrors()`.
-- In the current version, the class cannot be used for formatting as it focuses on extracting columns and relations for the needs of the SQL editor.
+  - Creates a tree structure representing the SQL query.
+  - Currently supports only SELECT statements.
+  - Divides the query into parts using standard-compliant keywords at a minimal level required to find basic information such as columns, relations, and subqueries.
+  - Does not validate the correctness of the query.
+  - Enables further syntactic analysis of queries.
+  - The `build` function does not throw exceptions; if any errors occur, you can find them using `getErrors()`.
+  - In the current version, the class cannot be used for formatting as it focuses on extracting columns and relations for the needs of the SQL editor.
 - **Example usage**:
   ```typescript
   const tokenizer = new SqlTokenizer();
