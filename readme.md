@@ -110,11 +110,11 @@ select schema_name, table_name, owner_name, table_space, description, accessible
  order by schema_name, table_name
 ```
 `analyzer.findDependencyAt(410)`
-```json
 ```sql
 coalesce(t.spcname, (select spcname from pg_database d join pg_tablespace t on t.oid = d.dattablespace where d.datname = case when
                                                             ^
 ```
+```json
 [
   { "id": 102, "component": "IDENTIFIER", "tokens": ["..."] },
   { "id": 97, "component": "SOURCE", "tokens": ["..."], "components": ["..."] },
@@ -146,11 +146,11 @@ coalesce(t.spcname, (select spcname from pg_database d join pg_tablespace t on t
 ]
 ```
 `analyzer.ownerStatementColumns(1010)`
-```
 ```sql
 when pg_catalog.has_table_privilege(c.oid, 'SELECT, INSERT, UPDATE, DELETE') then 'GRANTED' 
                                              ^
 ```
+```json
 [
   { "alias": "schema_name", "component": { /* ... */ } },
   { "alias": "table_name", "component": { /* ... */ } },
