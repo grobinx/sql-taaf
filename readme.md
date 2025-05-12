@@ -146,7 +146,7 @@ coalesce(t.spcname, (select spcname from pg_database d join pg_tablespace t on t
 ]
 ```
 `analyzer.ownerStatementColumns(1010)`
-```json
+```
 ```sql
 when pg_catalog.has_table_privilege(c.oid, 'SELECT, INSERT, UPDATE, DELETE') then 'GRANTED' 
                                              ^
