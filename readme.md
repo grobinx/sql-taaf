@@ -65,6 +65,7 @@ The project was created for the DBORG project (the younger brother of ORBADA ava
 - **Building AST (Abstract Syntax Tree)**: Creates a tree structure based on the SQL query.
 - **Dependency Analysis**: Identifies dependencies in SQL queries.
 - **Relation Analysis**: Finds used tables and other objects in SQL queries.
+- **Find CTE relation columns**: Searches for columns if the relation originates from a Common Table Expression (CTE).
 
 ## Example Usage
 Test code demonstrating the basic functionalities of the package:
