@@ -852,6 +852,9 @@ export class SqlAstBuilder {
                     components.unshift(this.prepareComponent("IDENTIFIER", identifierTokens));
                 }
             }
+            else if (alias) {
+                components.unshift(this.prepareComponent("IDENTIFIER", alias.tokens));
+            }
 
             if (joinType.length > 0) {
                 components.unshift(this.prepareComponent("JOIN TYPE", joinType));
