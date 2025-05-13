@@ -199,7 +199,7 @@ export class SqlTokenizer {
     }
 
     private getTokenType(value: string): TokenType {
-        if (/^[a-zA-Z_$#][a-zA-Z0-9_$#]*$/.test(value)) {
+        if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)) {
             // Treat all valid identifiers as 'identifier'
             return 'identifier';
         }
@@ -231,7 +231,7 @@ export class SqlTokenizer {
     }
 
     private isOperator(value: string): boolean {
-        const operatorChars = [':', '+', '-', '*', '/', '=', '<', '>', '!', '|', '&', '~', '@', '%', '^', '?', '.'];
+        const operatorChars = [':', '+', '-', '*', '/', '=', '<', '>', '!', '|', '&', '~', '@', '%', '^', '?', '.', '$', '#'];
         return [...value].every(char => operatorChars.includes(char));
     }
 
