@@ -99,6 +99,9 @@ export class SqlAnalyzer {
                                 if (parts.length === 1) {
                                     columns = this.findCteColumns(statement, parts[0]);
                                 }
+                                if (!columns?.length) {
+                                    columns = this.extractFieldsColumns(source, alias ? alias.tokens[0].value : undefined);
+                                }
                                 relations.push({
                                     parts: parts,
                                     alias: alias ? alias.tokens[0].value : undefined,
@@ -106,6 +109,7 @@ export class SqlAnalyzer {
                                     columns: columns
                                 });
                             }
+
                         }
                     }
                 }
@@ -135,13 +139,13 @@ export class SqlAnalyzer {
 
         const statement = stack.find(c => c.component === "STATEMENT");
         if (statement) {
-            return this.statementColumns(statement);
+            return this.extractStatementColumns(statement);
         }
 
         return result;
     }
 
-    private statementColumns(statement: AstComponent, relationName?: string): Column[] {
+    private extractStatementColumns(statement: AstComponent, relationName?: string): Column[] {
         const result: Column[] = [];
         const select = statement.components?.find(c => c.component === "SELECT");
         if (select) {
@@ -160,41 +164,51 @@ export class SqlAnalyzer {
         return result;
     }
 
+    extractFieldsColumns(source: AstComponent, relationAlias?: string): Column[] {
+        const columns: Column[] = [];
+        const fields = source.components?.find(c => c.component === "FIELDS");
+        if (fields) {
+            fields.components?.forEach(c => {
+                if (c.component === "FIELD") {
+                    const name = c.components?.find(c => c.component === "NAME");
+                    const column: Column = {
+                        alias: name ? name.tokens[0].value : undefined,
+                        relationAlias: relationAlias,
+                        component: c
+                    };
+                    columns.push(column);
+                }
+            });
+        }
+        return columns;
+    }
+
     /**
      * Finds columns in the CTE with the given alias for owner statement.
      * This is internal function, but...
      * 
      * @param ownerStatement 
-     * @param name 
+     * @param relationName 
      * @returns 
      */
-    findCteColumns(ownerStatement: AstComponent, name?: string, alias?: string): Column[] | undefined {
+    findCteColumns(ownerStatement: AstComponent, relationName?: string, relationAlias?: string): Column[] | undefined {
         const withComponent = ownerStatement.components?.find(c => c.component === "WITH");
         if (withComponent) {
             const ctes = withComponent.components?.filter(c => c.component === "CTE");
             if (ctes) {
                 const columns: Column[] = [];
                 for (const cte of ctes) {
-                    const relationName = cte.components?.find(c => c.component === "NAME");
-                    if (relationName && (this.identEqual(relationName.tokens[0].value, name) || !name || name.trim() === "")) {
-                        const fields = cte.components?.find(c => c.component === "FIELDS");
-                        if (fields) {
-                            fields.components?.forEach(c => {
-                                if (c.component === "FIELD") {
-                                    const name = c.components?.find(c => c.component === "NAME");
-                                    const column: Column = {
-                                        alias: alias ?? (name ? name.tokens[0].value : undefined),
-                                        relationAlias: relationName.tokens[0].value,
-                                        component: c
-                                    };
-                                    columns.push(column);
-                                }
-                            });
-                            return columns;
+                    const cteName = cte.components?.find(c => c.component === "NAME");
+                    if (cteName && (this.identEqual(cteName.tokens[0].value, relationName) || !relationName || relationName.trim() === "")) {
+                        const foundFieldsColumns = this.extractFieldsColumns(cte, relationAlias ?? cteName.tokens[0].value);
+                        if (foundFieldsColumns.length) {
+                            columns.push(...foundFieldsColumns);
                         }
-                        const statement = cte.components?.find(c => c.component === "STATEMENT");
-                        if (statement) {
-                            columns.push(...this.statementColumns(statement, alias ?? relationName.tokens[0].value));
+                        else {
+                            const statement = cte.components?.find(c => c.component === "STATEMENT");
+                            if (statement) {
+                                columns.push(...this.extractStatementColumns(statement, relationAlias ?? cteName.tokens[0].value));
+                            }
                         }
                     }
                 }
@@ -208,10 +222,10 @@ export class SqlAnalyzer {
      * This is internal function, but...
      * 
      * @param ownerStatement 
-     * @param alias 
+     * @param relationAlias 
      * @returns 
      */
-    findColumns(ownerStatement: AstComponent, alias: string): Column[] | undefined {
+    findColumns(ownerStatement: AstComponent, relationAlias: string): Column[] | undefined {
         const from = ownerStatement.components?.find(c => c.component === "FROM");
         if (from) {
             const sources = from.components?.filter(c => c.component === "SOURCE");
@@ -219,10 +233,24 @@ export class SqlAnalyzer {
                 const columns: Column[] = [];
                 for (const source of sources) {
                     const relationName = source.components?.find(c => c.component === "NAME");
-                    if (relationName && (this.identEqual(relationName.tokens[0].value, alias) || !alias || alias.trim() === "")) {
+                    if (relationName && (this.identEqual(relationName.tokens[0].value, relationAlias) || !relationAlias || relationAlias.trim() === "")) {
                         const statement = source.components?.find(c => c.component === "STATEMENT");
                         if (statement) {
-                            columns.push(...this.statementColumns(statement, relationName.tokens[0].value));
+                            columns.push(...this.extractStatementColumns(statement, relationName.tokens[0].value));
+                        }
+                        const fields = source.components?.find(c => c.component === "FIELDS");
+                        if (fields) {
+                            fields.components?.forEach(c => {
+                                if (c.component === "FIELD") {
+                                    const name = c.components?.find(c => c.component === "NAME");
+                                    const column: Column = {
+                                        alias: name ? name.tokens[0].value : undefined,
+                                        relationAlias: relationAlias ?? relationName.tokens[0].value,
+                                        component: c
+                                    };
+                                    columns.push(column);
+                                }
+                            });
                         }
                     }
                 }
@@ -246,7 +274,7 @@ export class SqlAnalyzer {
                         if (relationName) {
                             const statement = source.components?.find(c => c.component === "STATEMENT");
                             if (statement) {
-                                columns.push(...this.statementColumns(statement, relationName.tokens[0].value));
+                                columns.push(...this.extractStatementColumns(statement, relationName.tokens[0].value));
                             }
                             else {
                                 const relation = source.components?.find(c => c.component === "IDENTIFIER");
