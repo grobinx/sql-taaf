@@ -67,19 +67,19 @@ The project was created for the DBORG project (the younger brother of ORBADA ava
 
 ## Supports and general syntaxes
 - column, if no alias is found, then the last identifier will become the alias
-  `[identifier[.identifier[.identifier]] | expression] [as] [alias]`
+  - `[identifier[.identifier[.identifier]] | expression] [as] [alias]`
 - relation in from clause
-  `identifier[.identifier[.identifier]] [(function arguments)] ... [as] [alias] [(field definition)]`
-  `(select [distinct] ...) [as] [alias] [(field definition)]`
+  - `identifier[.identifier[.identifier]] [(function arguments)] ... [as] [alias] [(field definition)]`
+  - `(select [distinct] ...) [as] [alias] [(field definition)]`
 - CTE in with clause
-  `[recursive] identifier [(field list)] [as] (statement)`
+  - `[recursive] identifier [(field list)] [as] (statement)`
 - Resolve keywords and builds AST
-  `WITH, SELECT, FROM, WHERE, ORDER BY, GROUP BY, HAVING, UNION [ALL], INTERSECT, EXCEPT, LIMIT, OFFSET, CASE WHEN THEN ELSE END`
+  - `WITH, SELECT, FROM, WHERE, ORDER BY, GROUP BY, HAVING, UNION [ALL], INTERSECT, EXCEPT, LIMIT, OFFSET, CASE WHEN THEN ELSE END`
 - Supported but without building AST (for now)
-  `DELETE, UPDATE, INSERT, SET, VALUES`
+  - `DELETE, UPDATE, INSERT, SET, VALUES`
 - Identifiers are (yes, in some databases, you can also use @, #, $, maybe someday I will add this option)
-  `[a-z|A-Z|0-9|_]`
-  `"[any chars]"`
+  - `[a-z|A-Z|0-9|_]`
+  - `"[any chars]"`
 
 ## Examples and results
 ----
