@@ -1,10 +1,20 @@
 import { AstComponent } from "./SqlAstBuilder";
 
+export type RelationType = "relation" | "cte" | "statement" | "function";
+
 export interface Relation {
+    /**
+     * Probably type of the relation
+     *
+     * * cte is when found a single name and founded name is in with clause on stack
+     * * function is when found identifier(s) and values in parenthesis after identifier
+     * * statement is when found select
+     */
+    type: RelationType;
     /**
      * Relation name as parts
      */
-    parts?: string[];
+    name?: string[];
     /**
      * Alias for the relation
      */
@@ -14,14 +24,16 @@ export interface Relation {
      */
     component: AstComponent;
     /**
-     * Columns if relation is a cte
+     * CTE component if relation is a cte
+     * Arguments if relation is a function
+     * Statement if relation is a statement
      */
-    columns?: Column[];
+    dependComponent?: AstComponent;
 }
 
 export interface Column {
     alias?: string;
-    relationAlias?: string;
+    relation?: Relation;
     component: AstComponent;
 }
 
@@ -33,7 +45,7 @@ export class SqlAnalyzer {
         this.ast = ast
     }
 
-    identEqual(a: string | undefined | null, b: string | undefined | null): boolean {
+    private identEqual(a: string | undefined | null, b: string | undefined | null): boolean {
         if (a && b) {
             if ((a.length && a[0] === '"' && a[a.length - 1] === '"') ||
                 (b.length && b[0] === '"' && b[b.length - 1] === '"')) {
@@ -45,11 +57,11 @@ export class SqlAnalyzer {
     }
 
     /**
-     * Znajduje zależności dla danego tokena w zapytaniu SQL.
-     * @param index - index of token in the SQL statement
-     * @returns Tablica komponentów AST, które są zależne od danego tokena.
+     * Znajduje zależności dla danej pozycji w zapytaniu SQL.
+     * @param index - index of position in the SQL statement
+     * @returns Tablica komponentów AST, które są zależne od danej pozycji.
      */
-    findDependencyAt(index: number): AstComponent[] {
+    private findDependencyAt(index: number): AstComponent[] {
         const result: AstComponent[] = [];
 
         const search = (component: AstComponent) => {
@@ -75,6 +87,100 @@ export class SqlAnalyzer {
         return result;
     }
 
+    private findDependency(component: AstComponent): AstComponent[] {
+        const stack: AstComponent[] = [];
+
+        const search = (current: AstComponent): boolean => {
+            if (current.id === component.id) {
+                stack.push(current); // Dodaj znaleziony komponent na koniec stosu
+                return true;
+            }
+
+            if (current.components) {
+                for (const subComponent of current.components) {
+                    if (search(subComponent)) {
+                        stack.push(current); // Dodaj rodzica na stos, jeśli dziecko zostało znalezione
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        };
+
+        search(this.ast); // Rozpocznij przeszukiwanie od korzenia AST
+        return stack;
+    }
+
+    private resolveCteRelation(source: AstComponent, cteName: string): AstComponent | undefined {
+        const depends = this.findDependency(source);
+        const statements = depends.filter(c => c.component === "STATEMENT");
+        if (statements.length) {
+            for (const statement of statements) {
+                const withComponent = statement.components?.find(c => c.component === "WITH");
+                if (withComponent) {
+                    const ctes = withComponent.components?.filter(c => c.component === "CTE" || c.component === "CTE RECURSIVE");
+                    if (ctes) {
+                        for (const cte of ctes) {
+                            const name = cte.components?.find(c => c.component === "NAME");
+                            if (name && this.identEqual(name.tokens[0].value, cteName)) {
+                                return cte;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private resolveRelation(source: AstComponent): Relation | undefined {
+        const alias = source.components?.find(c => c.component === "NAME");
+
+        const statement = source.components?.find(c => c.component === "STATEMENT");
+        if (statement) {
+            const alias = source.components?.find(c => c.component === "NAME");
+            return {
+                type: "statement",
+                alias: alias ? alias.tokens[0].value : undefined,
+                component: source,
+                dependComponent: statement,
+            };
+        }
+
+        const relation = source.components?.find(c => c.component === "IDENTIFIER");
+        if (relation) {
+            const parts = relation.tokens.filter(t => t.type === "identifier").map(t => t.value);
+            if (parts.length === 1) {
+                const cte = this.resolveCteRelation(source, parts[0]);
+                if (cte) {
+                    return {
+                        type: "cte",
+                        name: parts,
+                        alias: alias ? alias.tokens[0].value : undefined,
+                        component: source,
+                        dependComponent: cte,
+                    };
+                }
+            }
+            const values = source.components?.find(c => c.component === "VALUES");
+            if (values) {
+                return {
+                    type: "function",
+                    name: parts,
+                    alias: alias ? alias.tokens[0].value : undefined,
+                    component: source,
+                    dependComponent: values,
+                };
+            }
+            return {
+                type: "relation",
+                name: parts,
+                alias: alias ? alias.tokens[0].value : undefined,
+                component: source,
+            }
+        }
+    }
+
     /**
      * Zwraca wszystkie relacje w zapytaniu SQL.
      * 
@@ -91,34 +197,16 @@ export class SqlAnalyzer {
                     const sources = from.components?.filter(c => c.component === "SOURCE");
                     if (sources) {
                         for (const source of sources) {
-                            const relation = source.components?.find(c => c.component === "IDENTIFIER");
-                            const alias = source.components?.find(c => c.component === "NAME");
+                            const relation = this.resolveRelation(source);
                             if (relation) {
-                                const parts = relation.tokens.filter(t => t.type === "identifier").map(t => t.value);
-                                let columns: Column[] | undefined;
-                                if (parts.length === 1) {
-                                    columns = this.findCteColumns(statement, parts[0]);
-                                }
-                                if (!columns?.length) {
-                                    columns = this.extractFieldsColumns(source, alias ? alias.tokens[0].value : undefined);
-                                }
-                                relations.push({
-                                    parts: parts,
-                                    alias: alias ? alias.tokens[0].value : undefined,
-                                    component: source,
-                                    columns: columns
-                                });
+                                relations.push(relation);
                             }
-
                         }
                     }
                 }
             }
 
             if (component.components) {
-                if (component.component === "CTE") {
-                    console.log("CTE");
-                }
                 component.components.forEach(search);
             }
         };
@@ -128,24 +216,55 @@ export class SqlAnalyzer {
     }
 
     /**
-     * Zwraca kolumny w najbliższym zapytaniu, do którego należy dany token.
+     * Resolves the columns for the given relation.
+     * The function returns all columns in the relation if is a function and fields are defined,
+     * if the relation is a CTE or is a statement.
      * 
-     * @param index - index of token in the SQL statement
-     * @returns Tablica kolumn w najbliższym zapytaniu, do którego należy dany token.
+     * @param relation - Relation to resolve
+     * @returns Array of columns found in the relation
      */
-    ownerStatementColumns(index: number): Column[] {
+    resolveRelationColumns(...relation: Relation[]): Column[] {
         const result: Column[] = [];
-        const stack = this.findDependencyAt(index);
-
-        const statement = stack.find(c => c.component === "STATEMENT");
-        if (statement) {
-            return this.extractStatementColumns(statement);
+        for (const r of relation) {
+            const fields = r.component.components?.find(c => c.component === "FIELDS");
+            // if relation is a function or if fields are defined
+            if (fields) {
+                const columns = this.extractFieldsColumns(fields, r);
+                if (columns) {
+                    result.push(...columns);
+                    continue;
+                }
+            }
+            if (r.type === "statement" && r.dependComponent) {
+                const columns = this.extractStatementColumns(r.dependComponent, r);
+                if (columns) {
+                    result.push(...columns);
+                    continue;
+                }
+            }
+            if (r.type === "cte") {
+                const fields = r.dependComponent?.components?.find(c => c.component === "FIELDS");
+                // if fields are defined
+                if (fields) {
+                    const columns = this.extractFieldsColumns(fields, r);
+                    if (columns) {
+                        result.push(...columns);
+                        continue;
+                    }
+                }
+                const statement = r.dependComponent?.components?.find(c => c.component === "STATEMENT");
+                if (statement) {
+                    const columns = this.extractStatementColumns(statement, r);
+                    if (columns) {
+                        result.push(...columns);
+                    }
+                }
+            }
         }
-
         return result;
     }
 
-    private extractStatementColumns(statement: AstComponent, relationName?: string): Column[] {
+    private extractStatementColumns(statement: AstComponent, relation: Relation): Column[] {
         const result: Column[] = [];
         const select = statement.components?.find(c => c.component === "SELECT");
         if (select) {
@@ -154,7 +273,7 @@ export class SqlAnalyzer {
                     const name = c.components?.find(c => c.component === "NAME");
                     const column: Column = {
                         alias: name ? name.tokens[0].value : undefined,
-                        relationAlias: relationName,
+                        relation: relation,
                         component: c
                     };
                     result.push(column);
@@ -164,7 +283,7 @@ export class SqlAnalyzer {
         return result;
     }
 
-    extractFieldsColumns(source: AstComponent, relationAlias?: string): Column[] {
+    private extractFieldsColumns(source: AstComponent, relation: Relation): Column[] {
         const columns: Column[] = [];
         const fields = source.components?.find(c => c.component === "FIELDS");
         if (fields) {
@@ -173,7 +292,7 @@ export class SqlAnalyzer {
                     const name = c.components?.find(c => c.component === "NAME");
                     const column: Column = {
                         alias: name ? name.tokens[0].value : undefined,
-                        relationAlias: relationAlias,
+                        relation: relation,
                         component: c
                     };
                     columns.push(column);
@@ -184,163 +303,28 @@ export class SqlAnalyzer {
     }
 
     /**
-     * Finds columns in the CTE with the given alias for owner statement.
-     * This is internal function, but...
+     * Finds the relations at the given index.
+     * The function returns all relations in the stack at the given index.
+     * Does not verify the visibility scope of the relations.
      * 
-     * @param ownerStatement 
-     * @param relationName 
-     * @returns 
+     * @param index - index of position in the SQL statement
+     * @returns An array of relations found on stack at the given index
      */
-    findCteColumns(ownerStatement: AstComponent, relationName?: string, relationAlias?: string): Column[] | undefined {
-        const withComponent = ownerStatement.components?.find(c => c.component === "WITH");
-        if (withComponent) {
-            const ctes = withComponent.components?.filter(c => c.component === "CTE");
-            if (ctes) {
-                const columns: Column[] = [];
-                for (const cte of ctes) {
-                    const cteName = cte.components?.find(c => c.component === "NAME");
-                    if (cteName && (this.identEqual(cteName.tokens[0].value, relationName) || !relationName || relationName.trim() === "")) {
-                        const foundFieldsColumns = this.extractFieldsColumns(cte, relationAlias ?? cteName.tokens[0].value);
-                        if (foundFieldsColumns.length) {
-                            columns.push(...foundFieldsColumns);
-                        }
-                        else {
-                            const statement = cte.components?.find(c => c.component === "STATEMENT");
-                            if (statement) {
-                                columns.push(...this.extractStatementColumns(statement, relationAlias ?? cteName.tokens[0].value));
-                            }
-                        }
-                    }
-                }
-                return columns.length ? columns : undefined;
-            }
-        }
-    }
-
-    /**
-     * Finds the relation columns in the given owner statement with the given alias if relation is a statement.
-     * This is internal function, but...
-     * 
-     * @param ownerStatement 
-     * @param relationAlias 
-     * @returns 
-     */
-    findColumns(ownerStatement: AstComponent, relationAlias: string): Column[] | undefined {
-        const from = ownerStatement.components?.find(c => c.component === "FROM");
-        if (from) {
-            const sources = from.components?.filter(c => c.component === "SOURCE");
-            if (sources) {
-                const columns: Column[] = [];
-                for (const source of sources) {
-                    const relationName = source.components?.find(c => c.component === "NAME");
-                    if (relationName && (this.identEqual(relationName.tokens[0].value, relationAlias) || !relationAlias || relationAlias.trim() === "")) {
-                        const statement = source.components?.find(c => c.component === "STATEMENT");
-                        if (statement) {
-                            columns.push(...this.extractStatementColumns(statement, relationName.tokens[0].value));
-                        }
-                        const fields = source.components?.find(c => c.component === "FIELDS");
-                        if (fields) {
-                            fields.components?.forEach(c => {
-                                if (c.component === "FIELD") {
-                                    const name = c.components?.find(c => c.component === "NAME");
-                                    const column: Column = {
-                                        alias: name ? name.tokens[0].value : undefined,
-                                        relationAlias: relationAlias ?? relationName.tokens[0].value,
-                                        component: c
-                                    };
-                                    columns.push(column);
-                                }
-                            });
-                        }
-                    }
-                }
-                return columns.length ? columns : undefined;
-            }
-        }
-    }
-
-    findColumnsAt(index: number): Column[] | undefined {
+    findRelationsAt(index: number): Relation[] {
         const stack = this.findDependencyAt(index);
-        const columns: Column[] = [];
-
-        const ownerStatement = stack.find(c => c.component === "STATEMENT");
-        if (ownerStatement) {
-            const from = ownerStatement.components?.find(c => c.component === "FROM");
-            if (from) {
-                const sources = from.components?.filter(c => c.component === "SOURCE");
-                if (sources) {
-                    for (const source of sources) {
-                        const relationName = source.components?.find(c => c.component === "NAME");
-                        if (relationName) {
-                            const statement = source.components?.find(c => c.component === "STATEMENT");
-                            if (statement) {
-                                columns.push(...this.extractStatementColumns(statement, relationName.tokens[0].value));
-                            }
-                            else {
-                                const relation = source.components?.find(c => c.component === "IDENTIFIER");
-                                const alias = source.components?.find(c => c.component === "NAME");
-                                if (relation) {
-                                    const parts = relation.tokens.filter(t => t.type === "identifier").map(t => t.value);
-                                    if (parts.length === 1) {
-                                        const cteColumns = this.findCteColumns(ownerStatement, parts[0], alias?.tokens[0].value);
-                                        if (cteColumns) {
-                                            columns.push(...cteColumns);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return columns.length ? columns : undefined;
-    }
-
-    /**
-     * Finds the relation alias at the given name and index.
-     * 
-     * @param name - The name of the relation alias.
-     * @param index - The index of the token in the SQL statement.
-     * @returns The relation or undefined if not found.
-     */
-    findRelationAliasAt(name: string, index: number): Relation | undefined {
-        const stack = this.findDependencyAt(index);
+        const relations: Relation[] = [];
 
         for (const component of stack) {
-            if (component.component !== "STATEMENT") {
-                continue;
-            }
-            const statement = component;
-            const from = statement.components?.find(c => c.component === "FROM");
-            if (from) {
-                const sources = from.components?.filter(c => c.component === "SOURCE");
-                if (sources) {
-                    for (const source of sources) {
-                        const alias = source.components?.find(c => c.component === "NAME");
-                        if (alias && this.identEqual(alias.tokens[0].value, name)) {
-                            let relation = source.components?.find(c => c.component === "IDENTIFIER");
+            if (component.component === "STATEMENT") {
+                const statement = component;
+                const from = statement.components?.find(c => c.component === "FROM");
+                if (from) {
+                    const sources = from.components?.filter(c => c.component === "SOURCE");
+                    if (sources) {
+                        for (const source of sources) {
+                            const relation = this.resolveRelation(source);
                             if (relation) {
-                                const parts = relation.tokens.filter(t => t.type === "identifier").map(t => t.value);
-                                let columns: Column[] | undefined;
-                                if (parts.length === 1) {
-                                    columns = this.findCteColumns(statement, parts[0]);
-                                }
-                                return {
-                                    parts: parts,
-                                    alias: alias.tokens[0].value,
-                                    component: relation,
-                                    columns: columns
-                                };
-                            }
-                            relation = source.components?.find(c => c.component === "STATEMENT");
-                            if (relation) {
-                                return {
-                                    alias: alias.tokens[0].value,
-                                    component: relation,
-                                    columns: this.findColumns(statement, alias.tokens[0].value)
-                                };
+                                relations.push(relation);
                             }
                         }
                     }
@@ -348,7 +332,7 @@ export class SqlAnalyzer {
             }
         }
 
-        return undefined;
+        return relations;
     }
 
 }

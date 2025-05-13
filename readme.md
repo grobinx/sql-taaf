@@ -45,7 +45,7 @@ The project was created for the DBORG project (the younger brother of ORBADA ava
 - **Description**: A class that analyzes the AST to identify dependencies and relations in SQL queries.
 - **Features**:
   - Finds dependencies in SQL queries.
-  - Identifies tables and other objects used in queries.
+  - Identifies relations and columns if exists in statement.
 - **Example usage**:
   ```typescript
   const tokenizer = new SqlTokenizer();
@@ -55,8 +55,7 @@ The project was created for the DBORG project (the younger brother of ORBADA ava
 
   if (ast) {
       const analyzer = new SqlAnalyzer(ast);
-      console.log(analyzer.findDependencyAt(10)); // Finds dependencies at a specific query location
-      console.log(analyzer.findUsedRelations()); // Displays used tables
+      console.log(analyzer.findUsedRelations()); // Displays used relations
   }
   ```
 
@@ -64,24 +63,7 @@ The project was created for the DBORG project (the younger brother of ORBADA ava
 - **SQL Query Parsing**: Breaks down SQL queries into tokens.
 - **Building AST (Abstract Syntax Tree)**: Creates a tree structure based on the SQL query.
 - **Dependency Analysis**: Identifies dependencies in SQL queries.
-- **Relation Analysis**: Finds used tables and other objects in SQL queries.
-- **Find CTE relation columns**: Searches for columns if the relation originates from a Common Table Expression (CTE).
-
-## Example Usage
-Test code demonstrating the basic functionalities of the package:
-
-```typescript
-const tokenizer = new SqlTokenizer();
-const tokens = tokenizer.parse("SELECT * FROM users");
-const astBuilder = new SqlAstBuilder();
-const ast = astBuilder.build(tokens);
-
-if (ast) {
-    const analyzer = new SqlAnalyzer(ast);
-    console.log(analyzer.findDependencyAt(10));
-    console.log(analyzer.findUsedRelations());
-}
-```
+- **Find relations and columns**: Searches for relations and columns if defined in statement.
 
 ## Examples and results
 ----
@@ -113,66 +95,195 @@ select schema_name, table_name, owner_name, table_space, description, accessible
 - [Tokens JSON](doc/tokens.json)
 - [AST JSON (without tokens)](doc/ast.json)
 
-`analyzer.findDependencyAt(410)`
-```sql
-coalesce(t.spcname, (select spcname from pg_database d join pg_tablespace t on t.oid = d.dattablespace where d.datname = case when
-                                                            ^
-```
-```json
-[
-  { "id": 102, "component": "IDENTIFIER", "tokens": ["..."] },
-  { "id": 97, "component": "SOURCE", "tokens": ["..."], "components": ["..."] },
-  { "id": 90, "component": "FROM", "tokens": ["..."], "components": ["..."] },
-  { "id": 88, "component": "STATEMENT", "tokens": ["..."], "components": ["..."] },
-  { "id": 86, "component": "EXPRESSION", "tokens": ["..."], "components": ["..."] },
-  { "id": 84, "component": "VALUES", "tokens": ["..."], "components": ["..."] },
-  { "id": 81, "component": "EXPRESSION", "tokens": ["..."], "components": ["..."] },
-  { "id": 64, "component": "COLUMN", "tokens": ["..."], "components": ["..."] },
-  { "id": 58, "component": "SELECT", "tokens": ["..."], "components": ["..."] },
-  { "id": 57, "component": "STATEMENT", "tokens": ["..."], "components": ["..."] },
-  { "id": 55, "component": "SOURCE", "tokens": ["..."], "components": ["..."] },
-  { "id": 2, "component": "FROM", "tokens": ["..."], "components": ["..."] },
-  { "id": 374, "component": "STATEMENT", "tokens": ["..."], "components": ["..."] }
-]
-```
 `analyzer.findUsedRelations()`
 ```json
 [
-  { "parts": ["pg_database"], "alias": "d" },
-  { "parts": ["pg_tablespace"], "alias": "t" },
-  { "parts": ["pg_catalog", "aclexplode"], "alias": "g" },
-  { "parts": ["pg_catalog", "pg_inherits"], "alias": "i" },
-  { "parts": ["pg_foreign_table"], "alias": "pg_foreign_table" },
-  { "parts": ["pg_catalog", "pg_class"], "alias": "c" },
-  { "parts": ["pg_catalog", "pg_namespace"], "alias": "n" },
-  { "parts": ["pg_catalog", "pg_tablespace"], "alias": "t" },
-  { "parts": ["pg_catalog", "pg_description"], "alias": "d" }
+  {
+    "type": "statement",
+    "alias": "t",
+    "component": { "id": 55, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] },
+    "dependComponent": { "id": 57, "component": "STATEMENT", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "type": "relation",
+    "name": ["pg_catalog", "pg_class"],
+    "alias": "c",
+    "component": { "id": 294, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "type": "relation",
+    "name": ["pg_catalog", "pg_namespace"],
+    "alias": "n",
+    "component": { "id": 295, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "type": "relation",
+    "name": ["pg_catalog", "pg_tablespace"],
+    "alias": "t",
+    "component": { "id": 296, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "type": "relation",
+    "name": ["pg_catalog", "pg_description"],
+    "alias": "d",
+    "component": { "id": 297, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "type": "relation",
+    "name": ["pg_database"],
+    "alias": "d",
+    "component": { "id": 96, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "type": "relation",
+    "name": ["pg_tablespace"],
+    "alias": "t",
+    "component": { "id": 97, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "type": "function",
+    "name": ["pg_catalog", "aclexplode"],
+    "alias": "g",
+    "component": { "id": 152, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] },
+    "dependComponent": { "id": 154, "component": "VALUES", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "type": "relation",
+    "name": ["pg_catalog", "pg_inherits"],
+    "alias": "i",
+    "component": { "id": 197, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "type": "relation",
+    "name": ["pg_foreign_table"],
+    "alias": "pg_foreign_table",
+    "component": { "id": 288, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] }
+  }
 ]
 ```
-`analyzer.ownerStatementColumns(1010)`
+`analyzer.findRelationsAt(1010)`
 ```sql
 when pg_catalog.has_table_privilege(c.oid, 'SELECT, INSERT, UPDATE, DELETE') then 'GRANTED' 
                                              ^
 ```
 ```json
 [
-  { "alias": "schema_name", "component": { /* ... */ } },
-  { "alias": "table_name", "component": { /* ... */ } },
-  { "alias": "owner_name", "component": { /* ... */ } },
-  { "alias": "table_space", "component": { /* ... */ } },
-  { "alias": "accessible", "component": { /* ... */ } },
-  { "alias": "description", "component": { /* ... */ } },
-  { "alias": "inheritance", "component": { /* ... */ } },
-  { "alias": "foreign_table", "component": { /* ... */ } }
+  {
+    "type": "relation",
+    "name": ["pg_catalog", "pg_class"],
+    "alias": "c",
+    "component": { "id": 294, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "type": "relation",
+    "name": ["pg_catalog", "pg_namespace"],
+    "alias": "n",
+    "component": { "id": 295, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "type": "relation",
+    "name": ["pg_catalog", "pg_tablespace"],
+    "alias": "t",
+    "component": { "id": 296, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "type": "relation",
+    "name": ["pg_catalog", "pg_description"],
+    "alias": "d",
+    "component": { "id": 297, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "type": "statement",
+    "alias": "t",
+    "component": { "id": 55, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] },
+    "dependComponent": { "id": 57, "component": "STATEMENT", "tokens": [/* ... */], "components": [/* ... */] }
+  }
 ]
 ```
-`analyzer.findRelationAliasAt('c', 755)`
-```sql
-when (select true from pg_catalog.aclexplode(c.relacl) g where grantee = 0 limit 1) then 'PUBLIC'
-                                              ^
-```
+`analyzer.resolveRelationColumns(...analyzer.findRelationsAt(1010))`
 ```json
-{ "parts": ["pg_catalog", "pg_class"], "alias": "c", "component": { /* ... */ } }
+[
+  {
+    "alias": "schema_name",
+    "relation": {
+      "type": "statement",
+      "alias": "t",
+      "component": { "id": 55, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] },
+      "dependComponent": { "id": 57, "component": "STATEMENT", "tokens": [/* ... */], "components": [/* ... */] }
+    },
+    "component": { "id": 61, "component": "COLUMN", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "alias": "table_name",
+    "relation": {
+      "type": "statement",
+      "alias": "t",
+      "component": { "id": 55, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] },
+      "dependComponent": { "id": 57, "component": "STATEMENT", "tokens": [/* ... */], "components": [/* ... */] }
+    },
+    "component": { "id": 62, "component": "COLUMN", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "alias": "owner_name",
+    "relation": {
+      "type": "statement",
+      "alias": "t",
+      "component": { "id": 55, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] },
+      "dependComponent": { "id": 57, "component": "STATEMENT", "tokens": [/* ... */], "components": [/* ... */] }
+    },
+    "component": { "id": 63, "component": "COLUMN", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "alias": "table_space",
+    "relation": {
+      "type": "statement",
+      "alias": "t",
+      "component": { "id": 55, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] },
+      "dependComponent": { "id": 57, "component": "STATEMENT", "tokens": [/* ... */], "components": [/* ... */] }
+    },
+    "component": { "id": 64, "component": "COLUMN", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "alias": "accessible",
+    "relation": {
+      "type": "statement",
+      "alias": "t",
+      "component": { "id": 55, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] },
+      "dependComponent": { "id": 57, "component": "STATEMENT", "tokens": [/* ... */], "components": [/* ... */] }
+    },
+    "component": { "id": 65, "component": "COLUMN", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "alias": "description",
+    "relation": {
+      "type": "statement",
+      "alias": "t",
+      "component": { "id": 55, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] },
+      "dependComponent": { "id": 57, "component": "STATEMENT", "tokens": [/* ... */], "components": [/* ... */] }
+    },
+    "component": { "id": 66, "component": "COLUMN", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "alias": "inheritance",
+    "relation": {
+      "type": "statement",
+      "alias": "t",
+      "component": { "id": 55, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] },
+      "dependComponent": { "id": 57, "component": "STATEMENT", "tokens": [/* ... */], "components": [/* ... */] }
+    },
+    "component": { "id": 67, "component": "COLUMN", "tokens": [/* ... */], "components": [/* ... */] }
+  },
+  {
+    "alias": "foreign_table",
+    "relation": {
+      "type": "statement",
+      "alias": "t",
+      "component": { "id": 55, "component": "SOURCE", "tokens": [/* ... */], "components": [/* ... */] },
+      "dependComponent": { "id": 57, "component": "STATEMENT", "tokens": [/* ... */], "components": [/* ... */] }
+    },
+    "component": { "id": 68, "component": "COLUMN", "tokens": [/* ... */], "components": [/* ... */] }
+  }
+]
 ```
 
 ## Requirements
