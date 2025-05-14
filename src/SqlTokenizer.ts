@@ -21,7 +21,16 @@ export interface Token extends Position {
     value: string;
 }
 
+export interface Configuration {
+    extraIdentifierChars?: string[];
+}
+
 export class SqlTokenizer {
+    private operatorChars = [':', '+', '-', '*', '/', '=', '<', '>', '!', '|', '&', '~', '@', '%', '^', '?', '.', '$', '#'];
+    private punctuationChars = ['(', ')', '[', ']', '{', '}', ',', ';'];
+    private identifierRegex = new RegExp('^[a-zA-Z_][a-zA-Z0-9_]*$');
+    private extraIdentifierChars: string[];
+
     private position: Position = {
         startIndex: 0,
         endIndex: 0,
@@ -30,6 +39,17 @@ export class SqlTokenizer {
         startColumn: 1,
         endColumn: 1,
     };
+
+    constructor(config: Configuration = {}) {
+        this.extraIdentifierChars = config.extraIdentifierChars ?? [];
+
+        if (this.extraIdentifierChars.length > 0) {
+            this.identifierRegex = new RegExp(`^[a-zA-Z_][a-zA-Z0-9_${this.extraIdentifierChars.join('')}]*$`);
+            this.operatorChars = this.operatorChars.filter(
+                ch => !this.extraIdentifierChars.includes(ch)
+            );
+        }
+    }
 
     parse(sql: string): Token[] {
         // Reset position at the start of parsing
@@ -43,7 +63,6 @@ export class SqlTokenizer {
         };
 
         const tokens: Token[] = [];
-        const errors: string[] = [];
         let buffer = ''; // Temporary buffer for building tokens
         let inString: string | null = null; // Tracks if inside a string literal
         let inComment: 'line' | 'block' | null = null; // Tracks if inside a comment
@@ -199,8 +218,7 @@ export class SqlTokenizer {
     }
 
     private getTokenType(value: string): TokenType {
-        if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value)) {
-            // Treat all valid identifiers as 'identifier'
+        if (this.identifierRegex.test(value)) {
             return 'identifier';
         }
         if (/^[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?$/.test(value)) {
@@ -231,12 +249,11 @@ export class SqlTokenizer {
     }
 
     private isOperator(value: string): boolean {
-        const operatorChars = [':', '+', '-', '*', '/', '=', '<', '>', '!', '|', '&', '~', '@', '%', '^', '?', '.', '$', '#'];
-        return [...value].every(char => operatorChars.includes(char));
+        return [...value].every(char => this.operatorChars.includes(char));
     }
 
     private isPunctuation(char: string): boolean {
-        return ['(', ')', '[', ']', '{', '}', ',', ';'].includes(char);
+        return this.punctuationChars.includes(char);
     }
 }
 

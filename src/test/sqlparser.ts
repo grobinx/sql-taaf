@@ -1,9 +1,7 @@
 import fs from 'node:fs';
 import { SqlAnalyzer } from '../SqlAnalyzer';
 import { SqlAstBuilder } from '../SqlAstBuilder';
-import { SqlTokenizer } from '../SqlTokenizer';
-
-const parser = new SqlTokenizer();
+import { SqlTokenizer, Token } from '../SqlTokenizer';
 
 let sql = `with szkielet as (
 with all_date as (select * from generate_series('2019-08-31'::date, '2022-05-31'::date, '1 month') as dt),
@@ -89,7 +87,9 @@ sql = `select schema_name, table_name, owner_name, table_space, description, acc
 //           join omn.v_leki AS b USING(blz7)
 //          where b.nrok = 2020 and b.mies = 12`
 
+const parser = new SqlTokenizer();
 const tokens = parser.parse(sql);
+
 const ast = new SqlAstBuilder().build(tokens);
 
 if (ast) {
@@ -114,6 +114,7 @@ if (ast) {
 } else {
     console.error('AST is null. Cannot analyze.');
 }
+
 
 function removeTokensFromAst(ast: any): any {
     if (Array.isArray(ast)) {
