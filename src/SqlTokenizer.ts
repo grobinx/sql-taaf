@@ -40,6 +40,8 @@ export class SqlTokenizer {
         endColumn: 1,
     };
 
+    private tokenStartPosition: Position;
+
     constructor(config: Configuration = {}) {
         this.extraIdentifierChars = config.extraIdentifierChars ?? [];
 
@@ -49,6 +51,7 @@ export class SqlTokenizer {
                 ch => !this.extraIdentifierChars.includes(ch)
             );
         }
+        this.tokenStartPosition = { ...this.position };
     }
 
     parse(sql: string): Token[] {
@@ -62,32 +65,61 @@ export class SqlTokenizer {
             endColumn: 1,
         };
 
+        let charIndex = 0;
+
+        const consumeChar = () => {
+            const char = sql[charIndex];
+            this.updatePosition(char);
+            charIndex++;
+            return char;
+        }
+
+        const getCurrentChar = () => {
+            const char = sql[charIndex];
+            return char;
+        }
+
+        const getNextChar = () => {
+            const char = sql[charIndex + 1] ?? '';
+            return char;
+        }
+
+        const isNextChar = () => {
+            return charIndex < sql.length;
+        }
+
+        const appendChar = (char: string) => {
+            if (!buffer.length) {
+                this.startToken();
+            }
+            buffer += char;
+        }
+
         const tokens: Token[] = [];
         let buffer = ''; // Temporary buffer for building tokens
         let inString: string | null = null; // Tracks if inside a string literal
         let inComment: 'line' | 'block' | null = null; // Tracks if inside a comment
 
-        for (let i = 0; i < sql.length; i++) {
-            const char = sql[i];
-            const nextChar = sql[i + 1] || ''; // Lookahead for two-character sequences
-            this.updatePosition(char);
+        for (; isNextChar(); consumeChar()) {
+            const char = getCurrentChar();
+            const nextChar = getNextChar();
 
             // Handle block comments (/* */)
             if (inComment === 'block') {
-                buffer += char;
+                appendChar(char);
                 if (char === '*' && nextChar === '/') {
-                    buffer += nextChar;
+                    appendChar(nextChar);
                     tokens.push(this.createToken('comment', buffer));
                     buffer = '';
                     inComment = null;
-                    i++; // Skip the closing '/'
+                    consumeChar();
                 }
                 continue;
             }
 
             // Handle line comments (--)
             if (inComment === 'line') {
-                buffer += char;
+                appendChar(char);
                 if (char === '\n') {
                     tokens.push(this.createToken('comment', buffer));
                     buffer = '';
@@ -102,9 +134,10 @@ export class SqlTokenizer {
                     tokens.push(this.createToken(this.getTokenType(buffer), buffer));
                     buffer = '';
                 }
-                buffer += char + nextChar;
+                appendChar(char);
+                appendChar(nextChar);
                 inComment = 'block';
-                i++; // Skip the '*'
+                consumeChar(); // Skip the '*'
                 continue;
             }
 
@@ -114,19 +147,20 @@ export class SqlTokenizer {
                     tokens.push(this.createToken(this.getTokenType(buffer), buffer));
                     buffer = '';
                 }
-                buffer += char + nextChar;
+                appendChar(char);
+                appendChar(nextChar);
                 inComment = 'line';
-                i++; // Skip the second '-'
+                consumeChar(); // Skip the second '-'
                 continue;
             }
 
             // Handle string literals
             if (inString) {
-                buffer += char;
+                appendChar(char);
                 if (char === inString && nextChar === inString) {
                     // Escape sequence for double quotes or single quotes
-                    buffer += nextChar;
-                    i++; // Skip the escaped character
+                    appendChar(nextChar);
+                    consumeChar(); // Skip the escaped character
                     continue;
                 }
                 if (char === inString) {
@@ -145,7 +179,7 @@ export class SqlTokenizer {
                     buffer = '';
                 }
                 inString = char;
-                buffer += char;
+                appendChar(char);
                 continue;
             }
 
@@ -155,7 +189,7 @@ export class SqlTokenizer {
                     tokens.push(this.createToken(this.getTokenType(buffer), buffer));
                     buffer = '';
                 }
-                buffer += char;
+                appendChar(char);
                 continue;
             }
 
@@ -171,7 +205,9 @@ export class SqlTokenizer {
                     tokens.push(this.createToken(this.getTokenType(buffer), buffer));
                     buffer = '';
                 }
-                tokens.push(this.createToken('punctator', char));
+                appendChar(char);
+                tokens.push(this.createToken('punctator', buffer));
+                buffer = '';
                 continue;
             }
 
@@ -185,7 +221,7 @@ export class SqlTokenizer {
             }
 
             // Accumulate characters for identifiers, keywords, or numbers
-            buffer += char;
+            appendChar(char);
         }
 
         // Finalize the last token
@@ -205,15 +241,22 @@ export class SqlTokenizer {
         }
     }
 
+    private startToken() {
+        this.position.startIndex = this.position.endIndex;
+        this.position.startLine = this.position.endLine;
+        this.position.startColumn = this.position.endColumn;
+        this.tokenStartPosition = { ...this.position };
+    }
+
     private createToken(type: TokenType, value: string): Token {
         const token: Token = {
-            ...this.position,
+            ...this.tokenStartPosition,
+            endIndex: this.position.endIndex,
+            endLine: this.position.endLine,
+            endColumn: this.position.endColumn,
             type,
             value,
         };
-        this.position.startIndex = this.position.endIndex + 1;
-        this.position.startLine = this.position.endLine;
-        this.position.startColumn = this.position.endColumn;
         return token;
     }
 

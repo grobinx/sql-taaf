@@ -1093,7 +1093,7 @@
                                         },
                                         {
                                           "id": 227,
-                                          "component": "LITERAL"
+                                          "component": "IDENTIFIER"
                                         }
                                       ]
                                     },
@@ -1633,7 +1633,7 @@
                             },
                             {
                               "id": 339,
-                              "component": "LITERAL"
+                              "component": "IDENTIFIER"
                             }
                           ]
                         },
@@ -1651,7 +1651,7 @@
                             },
                             {
                               "id": 342,
-                              "component": "LITERAL"
+                              "component": "IDENTIFIER"
                             }
                           ]
                         },
@@ -1669,7 +1669,7 @@
                             },
                             {
                               "id": 345,
-                              "component": "LITERAL"
+                              "component": "IDENTIFIER"
                             }
                           ]
                         }

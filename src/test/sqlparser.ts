@@ -133,7 +133,7 @@ function removeTokensFromAst(ast: any): any {
 }
 
 console.log(ast);
-//fs.writeFileSync('doc/tokens.json', JSON.stringify(tokens, null, 2));
-//fs.writeFileSync('doc/ast.json', JSON.stringify(removeTokensFromAst(ast), null, 2));
+fs.writeFileSync('doc/tokens.json', JSON.stringify(tokens, null, 2));
+fs.writeFileSync('doc/ast.json', JSON.stringify(removeTokensFromAst(ast), null, 2));
 
 console.log('------------------');
