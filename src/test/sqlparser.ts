@@ -53,7 +53,7 @@ sql = `select schema_name, table_name, owner_name, table_space, description, acc
                d.description,
                (select 'inherits' from pg_catalog.pg_inherits i where i.inhrelid = c.oid union all select 'inherited' from pg_catalog.pg_inherits i where i.inhparent = c.oid limit 1) inheritance
               ,case c.relkind when 'f'::"char" then 
-                 (select coalesce(coalesce(coalesce(substring(ftoptions::varchar from '[{,]schema=([#$\w]+)'), substring(ftoptions::varchar from '[{,]schema_name=([#$\w]+)'))||'.', '')||coalesce(substring(ftoptions::varchar from '[{,"]table=(([#$\w]+)|\(.+\))[",}]'), substring(ftoptions::varchar from '[{,"]table_name=(([#$\w]+)|\(.+\))[",}]')), '') from pg_foreign_table f /*join pg_foreign_server s on f.ftserver = s.oid*/ where f.ftrelid = c.oid)
+                 (select coalesce(coalesce(coalesce(substring(ftoptions::varchar from '[{,]schema=([#$\\w]+)'), substring(ftoptions::varchar from '[{,]schema_name=([#$\\w]+)'))||'.', '')||coalesce(substring(ftoptions::varchar from '[{,"]table=(([#$\\w]+)|\\(.+\\))[",}]'), substring(ftoptions::varchar from '[{,"]table_name=(([#$\\w]+)|\\(.+\\))[",}]')), '') from pg_foreign_table f /*join pg_foreign_server s on f.ftserver = s.oid*/ where f.ftrelid = c.oid)
                end foreign_table
           from pg_catalog.pg_class c
                left join pg_catalog.pg_namespace n on n.oid = c.relnamespace

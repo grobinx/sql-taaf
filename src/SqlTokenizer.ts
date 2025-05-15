@@ -32,8 +32,8 @@ export class SqlTokenizer {
     private extraIdentifierChars: string[];
 
     private position: Position = {
-        startIndex: 0,
-        endIndex: 0,
+        startIndex: 1,
+        endIndex: 1,
         startLine: 1,
         endLine: 1,
         startColumn: 1,
@@ -57,8 +57,8 @@ export class SqlTokenizer {
     parse(sql: string): Token[] {
         // Reset position at the start of parsing
         this.position = {
-            startIndex: 0,
-            endIndex: 0,
+            startIndex: 1,
+            endIndex: 1,
             startLine: 1,
             endLine: 1,
             startColumn: 1,
@@ -69,7 +69,7 @@ export class SqlTokenizer {
 
         const consumeChar = () => {
             const char = sql[charIndex];
-            this.updatePosition(char);
+            this.updatePosition(char, charIndex);
             charIndex++;
             return char;
         }
@@ -89,8 +89,8 @@ export class SqlTokenizer {
         }
 
         const appendChar = (char: string) => {
-            if (!buffer.length) {
-                this.startToken();
+            if (!buffer) {
+                this.startToken(charIndex);
             }
             buffer += char;
         }
@@ -232,8 +232,8 @@ export class SqlTokenizer {
         return tokens;
     }
 
-    private updatePosition(char: string): void {
-        this.position.endIndex++;
+    private updatePosition(char: string, charIndex: number): void {
+        this.position.endIndex = charIndex + 1;
         this.position.endColumn++;
         if (char === '\n') {
             this.position.endLine++;
@@ -241,8 +241,9 @@ export class SqlTokenizer {
         }
     }
 
-    private startToken() {
-        this.position.startIndex = this.position.endIndex;
+    private startToken(charIndex: number) {
+        this.position.startIndex = charIndex + 1;
+        this.position.endIndex = charIndex + 1;
         this.position.startLine = this.position.endLine;
         this.position.startColumn = this.position.endColumn;
         this.tokenStartPosition = { ...this.position };
