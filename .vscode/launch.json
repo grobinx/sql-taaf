@@ -4,9 +4,9 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug SQL Parser (Compiled)",
+      "name": "Debug SQL Analyzer (Compiled)",
       "skipFiles": ["<node_internals>/**"],
-      "program": "${workspaceFolder}/dist/test/sqlparser.js",
+      "program": "${workspaceFolder}/dist/test/sql-analyzer.js",
       "preLaunchTask": "tsc: build",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     }

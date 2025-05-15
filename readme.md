@@ -309,11 +309,11 @@ when pg_catalog.has_table_privilege(c.oid, 'SELECT, INSERT, UPDATE, DELETE') the
 ## Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/username/sql-analyzer.git
+   git clone https://github.com/grobinx/sql-taaf.git
    ```
 2. Navigate to the project directory:
    ```bash
-   cd sql-analyzer
+   cd sql-taaf
    ```
 3. Install dependencies:
    ```bash

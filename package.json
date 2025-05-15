@@ -1,12 +1,19 @@
 {
-  "name": "sqlparser",
-  "version": "1.0.0",
+  "name": "sql-taaf",
+  "version": "1.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node ./dist/test/sqlparser.js",
-    "debug": "npm run build && node --inspect ./dist/test/sqlparser.js"
+    "start": "node ./dist/test/sql-analyzer.js",
+    "debug": "npm run build && node --inspect ./dist/test/sql-analyzer.js"
+  },
+  "bugs": {
+    "url": "https://github.com/grobinx/sql-taaf/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/grobinx/sql-taaf.git"
   },
   "keywords": [],
   "author": "",
