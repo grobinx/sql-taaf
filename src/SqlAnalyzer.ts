@@ -37,6 +37,12 @@ export interface Column {
     component: AstComponent;
 }
 
+export interface Identifier {
+    parts: string[];
+    index: number;
+    component: AstComponent;
+}
+
 export class SqlAnalyzer {
 
     private ast: AstComponent;
@@ -333,6 +339,71 @@ export class SqlAnalyzer {
         }
 
         return relations;
+    }
+
+    /**
+     * Finds the nearest in stack identifier at the given index.
+     * Remember that the identifier is the any word, tokenizer not recognize keywords.
+     * @param index 
+     * @returns 
+     */
+    findNearestIdentifierAt(index: number): Identifier | undefined {
+        const stack = this.findDependencyAt(index);
+        for (const component of stack) {
+            if (component.component === "EXPRESSION") {
+                const identifier = component.components?.find(c => c.component === "IDENTIFIER");
+                if (identifier) {
+                    // Find the token index in parts that matches the given index
+                    const identifierTokens = identifier.tokens.filter(t => t.type === "identifier");
+                    const parts = identifierTokens.map(t => t.value);
+                    let idx = -1;
+                    for (let i = 0; i < identifierTokens.length; i++) {
+                        const t = identifierTokens[i];
+                        if (index >= t.startIndex && index <= t.endIndex) {
+                            idx = i;
+                            break;
+                        }
+                    }
+                    return {
+                        parts,
+                        index: idx,
+                        component: identifier
+                    };
+                }
+            }
+        }
+        return undefined;
+    }
+
+    /**
+     * Finds the identifier at the given index.
+     * Remember that the identifier is the any word, tokenizer not recognize keywords.
+     * @param index - index of position in the SQL statement
+     * @returns 
+     */
+    findIdentifierAt(index: number): Identifier | undefined {
+        const stack = this.findDependencyAt(index);
+        if (stack.length) {
+            if (stack[0].component === "IDENTIFIER") {
+                // Find the token index in parts that matches the given index
+                const identifierTokens = stack[0].tokens.filter(t => t.type === "identifier");
+                const parts = identifierTokens.map(t => t.value);
+                let idx = -1;
+                for (let i = 0; i < identifierTokens.length; i++) {
+                    const t = identifierTokens[i];
+                    if (index >= t.startIndex && index - 1 <= t.endIndex) {
+                        idx = i;
+                        break;
+                    }
+                }
+                return {
+                    parts,
+                    index: idx,
+                    component: stack[0]
+                };
+            }
+        }
+        return undefined;
     }
 
 }

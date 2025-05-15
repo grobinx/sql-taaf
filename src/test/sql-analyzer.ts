@@ -105,12 +105,10 @@ if (ast) {
     console.log(relations);
     console.log('Relations columns at:');
     console.log(analyzer.resolveRelationColumns(...relations));
-    // console.log(analyzer.ownerStatementColumns(1010));
-    // console.log(analyzer.findRelationAliasAt('f', 224));
-    // console.log(analyzer.findColumnsAt(8989));
-
-    // const formatter = new SqlFormatter();
-    // console.log(formatter.format(tokens));
+    console.log('Identifier nearest at:');
+    console.log(analyzer.findNearestIdentifierAt(1558));
+    console.log('Identifier at:');
+    console.log(analyzer.findIdentifierAt(1117));
 } else {
     console.error('AST is null. Cannot analyze.');
 }
@@ -133,7 +131,7 @@ function removeTokensFromAst(ast: any): any {
 }
 
 console.log(ast);
-fs.writeFileSync('doc/tokens.json', JSON.stringify(tokens, null, 2));
-fs.writeFileSync('doc/ast.json', JSON.stringify(removeTokensFromAst(ast), null, 2));
+//fs.writeFileSync('doc/tokens.json', JSON.stringify(tokens, null, 2));
+//fs.writeFileSync('doc/ast.json', JSON.stringify(removeTokensFromAst(ast), null, 2));
 
 console.log('------------------');

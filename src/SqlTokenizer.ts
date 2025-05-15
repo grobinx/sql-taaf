@@ -8,12 +8,11 @@ export interface Position {
 }
 
 export type TokenType =
-    "keyword"
-    | "identifier"
+    "identifier"
     | "string"
     | "number"
     | "operator"
-    | "punctator"
+    | "punctuator"
     | "comment";
 
 export interface Token extends Position {
@@ -32,8 +31,8 @@ export class SqlTokenizer {
     private extraIdentifierChars: string[];
 
     private position: Position = {
-        startIndex: 1,
-        endIndex: 1,
+        startIndex: 0,
+        endIndex: 0,
         startLine: 1,
         endLine: 1,
         startColumn: 1,
@@ -57,8 +56,8 @@ export class SqlTokenizer {
     parse(sql: string): Token[] {
         // Reset position at the start of parsing
         this.position = {
-            startIndex: 1,
-            endIndex: 1,
+            startIndex: 0,
+            endIndex: 0,
             startLine: 1,
             endLine: 1,
             startColumn: 1,
@@ -206,7 +205,7 @@ export class SqlTokenizer {
                     buffer = '';
                 }
                 appendChar(char);
-                tokens.push(this.createToken('punctator', buffer));
+                tokens.push(this.createToken('punctuator', buffer));
                 buffer = '';
                 continue;
             }
@@ -233,7 +232,7 @@ export class SqlTokenizer {
     }
 
     private updatePosition(char: string, charIndex: number): void {
-        this.position.endIndex = charIndex + 1;
+        this.position.endIndex = charIndex;
         this.position.endColumn++;
         if (char === '\n') {
             this.position.endLine++;
@@ -242,8 +241,8 @@ export class SqlTokenizer {
     }
 
     private startToken(charIndex: number) {
-        this.position.startIndex = charIndex + 1;
-        this.position.endIndex = charIndex + 1;
+        this.position.startIndex = charIndex;
+        this.position.endIndex = charIndex;
         this.position.startLine = this.position.endLine;
         this.position.startColumn = this.position.endColumn;
         this.tokenStartPosition = { ...this.position };
@@ -287,7 +286,7 @@ export class SqlTokenizer {
             return 'operator';
         }
         if (this.isPunctuation(value)) {
-            return 'punctator';
+            return 'punctuator';
         }
         return 'identifier';
     }

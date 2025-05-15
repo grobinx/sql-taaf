@@ -6,7 +6,7 @@
       "request": "launch",
       "name": "Debug SQL Analyzer (Compiled)",
       "skipFiles": ["<node_internals>/**"],
-      "program": "${workspaceFolder}/dist/test/sql-analyzer.js",
+      "program": "${workspaceFolder}/dist/src/test/sql-analyzer.js",
       "preLaunchTask": "tsc: build",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     }

@@ -608,7 +608,7 @@ export class SqlAstBuilder {
                 else {
                     identifierTokens.push(currentToken);
                 }
-            } else if (currentToken.type === "punctator" && currentToken.value === "(") {
+            } else if (currentToken.type === "punctuator" && currentToken.value === "(") {
                 // Jeśli napotkano otwierający nawias, dodaj expression
                 if (identifierTokens.length > 0) {
                     pushIdentifierIfExists();
@@ -627,7 +627,7 @@ export class SqlAstBuilder {
                         components.push(this.prepareComponent("EXPRESSION", expressionTokens));
                     }
                 }
-            } else if (currentToken.type === "punctator" && currentToken.value === "[") {
+            } else if (currentToken.type === "punctuator" && currentToken.value === "[") {
                 // Jeśli napotkano otwierający nawias kwadratowy, dodaj expression
                 if (identifierTokens.length > 0) {
                     pushIdentifierIfExists();
@@ -655,7 +655,7 @@ export class SqlAstBuilder {
                 identifierTokens = []; // Resetuj tokeny identyfikatora
                 break;
             } else {
-                components.push(this.prepareComponent("UNKNOWN", [currentToken]));
+                components.push(this.prepareComponent(currentToken.type === "comment" ? "COMMENT" : "UNKNOWN", [currentToken]));
             }
 
             this.consumeToken();

@@ -1,12 +1,12 @@
 {
   "name": "sql-taaf",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "",
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node ./dist/test/sql-analyzer.js",
-    "debug": "npm run build && node --inspect ./dist/test/sql-analyzer.js"
+    "start": "node ./dist/src/test/sql-analyzer.js",
+    "debug": "npm run build && node --inspect ./dist/src/test/sql-analyzer.js"
   },
   "bugs": {
     "url": "https://github.com/grobinx/sql-taaf/issues"
