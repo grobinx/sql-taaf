@@ -3,12 +3,14 @@
     "target": "es6", // lub nowszy, np. "es2017"
     "lib": ["es2017", "dom"], // Dodaj "es2017" lub nowsze
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
     "module": "commonjs",
     "strict": true,
     "esModuleInterop": true,
-    "sourceMap": true // Dodaj tę linię
+    "sourceMap": true,
+    "declaration": true,
+    
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "index.ts"],
   "exclude": ["node_modules", "dist"]
 }
