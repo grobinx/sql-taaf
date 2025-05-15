@@ -38,11 +38,17 @@ export interface Column {
 }
 
 export interface Identifier {
-    type: "identifier" | "name";
     parts: string[];
     index: number;
     component: AstComponent;
 }
+
+export interface StackElement {
+    type: "column" | "relation" | "identifier";
+    object: Column | Relation | Identifier;
+}
+
+export type Stack = StackElement[];
 
 export class SqlAnalyzer {
 
@@ -364,7 +370,6 @@ export class SqlAnalyzer {
                     }
                 }
                 return {
-                    type: stack[0].component === "IDENTIFIER" ? "identifier" : "name",
                     parts,
                     index: idx,
                     component: stack[0]
@@ -372,6 +377,56 @@ export class SqlAnalyzer {
             }
         }
         return undefined;
+    }
+
+    belongsToAt(index: number): Stack | undefined {
+        const stack = this.findDependencyAt(index);
+        if (stack.length) {
+            const result: Stack = [];
+            for (const component of stack) {
+                if (component.component === "COLUMN") {
+                    const column = component.components?.find(c => c.component === "NAME");
+                    if (column) {
+                        result.push({
+                            type: "column",
+                            object: {
+                                alias: column.tokens[0].value,
+                                component: component
+                            }
+                        });
+                    }
+                } else if (component.component === "IDENTIFIER" || component.component === "NAME") {
+                    result.push({
+                        type: "identifier",
+                        object: {
+                            parts: component.tokens.filter(t => t.type === "identifier").map(t => t.value),
+                            index: -1,
+                            component: component
+                        }
+                    });
+                } else if (component.component === "SOURCE") {
+                    const relation = this.resolveRelation(component);
+                    if (relation) {
+                        result.push({
+                            type: "relation",
+                            object: relation
+                        });
+                    }
+                }
+            }
+            return result;
+        }
+    }
+
+    comesFromAt(index: number): Stack | undefined {
+        const stack = this.findDependencyAt(index);
+        if (stack.length) {
+            const result: Stack = [];
+            for (const component of stack) {
+                
+            }
+            return result;
+        }
     }
 
 }

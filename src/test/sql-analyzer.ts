@@ -106,7 +106,9 @@ if (ast) {
     console.log('Relations columns at:');
     console.log(analyzer.resolveRelationColumns(...relations));
     console.log('Identifier at:');
-    console.log(analyzer.findIdentifierAt(2311));
+    console.log(analyzer.findIdentifierAt(23));
+    console.log('Belongs to:');
+    console.log(analyzer.belongsToAt(1309));
 } else {
     console.error('AST is null. Cannot analyze.');
 }
