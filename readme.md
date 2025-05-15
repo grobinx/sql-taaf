@@ -319,6 +319,10 @@ when pg_catalog.has_table_privilege(c.oid, 'SELECT, INSERT, UPDATE, DELETE') the
    ```bash
    npm install
    ```
+4. Install npm package
+   ```bash
+   npm i sql-taaf
+   ```
 
 ## Tests
 To run the test script, use the command:
