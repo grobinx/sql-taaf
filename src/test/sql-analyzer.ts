@@ -101,14 +101,12 @@ if (ast) {
     console.log('Relations columns:');
     console.log(analyzer.resolveRelationColumns(...relations));
     console.log('Relations at:');
-    relations = analyzer.findRelationsAt(1010);
+    relations = analyzer.findRelationsAt(246);
     console.log(relations);
     console.log('Relations columns at:');
     console.log(analyzer.resolveRelationColumns(...relations));
-    console.log('Identifier nearest at:');
-    console.log(analyzer.findNearestIdentifierAt(1558));
     console.log('Identifier at:');
-    console.log(analyzer.findIdentifierAt(1117));
+    console.log(analyzer.findIdentifierAt(2311));
 } else {
     console.error('AST is null. Cannot analyze.');
 }
