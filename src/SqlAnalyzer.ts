@@ -379,6 +379,12 @@ export class SqlAnalyzer {
         return undefined;
     }
 
+    /**
+     * Finds the stack of components that the given index belongs to.
+     * 
+     * @param index - index of position in the SQL statement
+     * @returns An array of components that the index belongs to
+     */
     belongsToAt(index: number): Stack | undefined {
         const stack = this.findDependencyAt(index);
         if (stack.length) {
@@ -418,12 +424,47 @@ export class SqlAnalyzer {
         }
     }
 
+    /**
+     * Finds the stack of components that the given index comes from.
+     * 
+     * @param index - index of position in the SQL statement
+     * @returns 
+     */
     comesFromAt(index: number): Stack | undefined {
         const stack = this.findDependencyAt(index);
         if (stack.length) {
             const result: Stack = [];
-            for (const component of stack) {
-                
+            if (stack[0].component === "IDENTIFIER") {
+                let parts = stack[0].tokens.filter(t => t.type === "identifier").map(t => t.value);
+                result.push({
+                    type: "identifier",
+                    object: {
+                        parts: parts,
+                        index: -1,
+                        component: stack[0]
+                    }
+                });
+
+                for (const component of stack.slice(1)) {
+                    if (component.component === "STATEMENT") {
+                        const from = component.components?.find(c => c.component === "FROM");
+                        if (from) {
+                            const sources = from.components?.filter(c => c.component === "SOURCE");
+                            if (sources) {
+                                for (const source of sources) {
+                                    const relation = this.resolveRelation(source);
+                                    if (relation && relation.alias === parts[0]) {
+                                        result.push({
+                                            type: "relation",
+                                            object: relation
+                                        });
+                                        return result;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
             return result;
         }

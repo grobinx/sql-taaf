@@ -108,7 +108,9 @@ if (ast) {
     console.log('Identifier at:');
     console.log(analyzer.findIdentifierAt(23));
     console.log('Belongs to:');
-    console.log(analyzer.belongsToAt(1309));
+    console.log(analyzer.belongsToAt(1196));
+    console.log('Comes from:');
+    console.log(analyzer.comesFromAt(442));
 } else {
     console.error('AST is null. Cannot analyze.');
 }
