@@ -87,13 +87,26 @@ sql = `select schema_name, table_name, owner_name, table_space, description, acc
 //           join omn.v_leki AS b USING(blz7)
 //          where b.nrok = 2020 and b.mies = 12`
 
+sql = `drop table if exists auth.user_sessions;
+create table auth.user_sessions (
+  uss_id varchar default gen_random_uuid() primary key,
+  uss_created timestamp default clock_timestamp() not null,
+  uss_updated timestamp default clock_timestamp() not null,
+  uss_version bigint default 1 not null,
+  uss_usr_id varchar not null references auth.users (usr_i) on delete cascade,
+  uss_dpt_code varchar not null,
+  uss_expires timestamp not null,
+  uss_ended timestamp
+);`
+
 const parser = new SqlTokenizer();
 const tokens = parser.parse(sql);
 
-const ast = new SqlAstBuilder().build(tokens);
+const builder = new SqlAstBuilder();
+const ast = builder.build(tokens);
 
 if (ast) {
-    const analyzer = new SqlAnalyzer(ast);
+    const analyzer = new SqlAnalyzer(ast[0]);
     // console.log(analyzer.findDependencyAt(410));
     console.log('Used relations:');
     let relations = analyzer.findUsedRelations();
@@ -133,6 +146,7 @@ function removeTokensFromAst(ast: any): any {
 }
 
 console.log(ast);
+console.log(builder.detect(tokens));
 //fs.writeFileSync('doc/tokens.json', JSON.stringify(tokens, null, 2));
 //fs.writeFileSync('doc/ast.json', JSON.stringify(removeTokensFromAst(ast), null, 2));
 

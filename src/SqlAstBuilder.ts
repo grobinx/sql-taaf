@@ -1,6 +1,7 @@
 import { Position, Token } from "./SqlTokenizer";
 
 const joinSeparators = ["JOIN", "LEFT", "RIGHT", "FULL", "INNER", "OUTER", "CROSS", "NATURAL", "LATERAL", ","];
+export type DetectStatementType = "SELECT" | "DML" | "DDL" | "MIXED" | "UNKNOWN";
 
 export interface AstComponent {
     id: number;
@@ -224,11 +225,54 @@ export class SqlAstBuilder {
         }
     }
 
-    splitStatement(component?: AstComponent): AstComponent[] {
+    splitStatements(): AstComponent[] {
+        const components: AstComponent[] = [];
+        const componentTokens: Token[][] = [];
+
+        while (this.getCurrentToken()) {
+            const statementTokens = this.consumeUntil([";"]);
+            if (statementTokens.length > 0) {
+                componentTokens.push(statementTokens);
+            }
+
+            // Konsumuj średnik, jeśli istnieje
+            const currentToken = this.getCurrentToken();
+            if (currentToken && currentToken.value === ";") {
+                this.consumeToken();
+            }
+        }
+
+        for (const tokens of componentTokens) {
+            const statement = this.splitStatement(tokens);
+
+            if (statement.some(c => ["SELECT"].includes(c.component))) {
+                components.push(this.prepareComponent("SELECT_STATEMENT", tokens, statement));
+            } else if (statement.some(c => ["DELETE", "UPDATE", "INSERT", "MERGE", "UPSERT", "LOCK", "UNLOCK", "TRUNCATE"].includes(c.component))) {
+                components.push(this.prepareComponent("DML_STATEMENT", tokens, statement));
+            } else if (statement.some(c => ["CREATE", "DROP", "ALTER", "RENAME"].includes(c.component))) {
+                components.push(this.prepareComponent("DDL_STATEMENT", tokens, statement));
+            } else if (statement.some(c => ["SHOW", "EXPLAIN", "CALL"].includes(c.component))) {
+                components.push(this.prepareComponent("UTILITY_STATEMENT", tokens, statement));
+            } else if (statement.some(c => ["COMMIT", "ROLLBACK", "SAVEPOINT", "START"].includes(c.component))) {
+                components.push(this.prepareComponent("TRANSACTION_STATEMENT", tokens, statement));
+            }
+            else {
+                components.push(this.prepareComponent("UNKNOWN", tokens, statement));
+            }
+        }
+
+        return components;
+    }
+
+    splitStatement(component: AstComponent | Token[]): AstComponent[] {
         const components: AstComponent[] = [];
 
-        if (component) {
-            this.tokens = component.tokens;
+        if (component && typeof component === "object" && "tokens" in component) {
+            this.tokens = (component as AstComponent).tokens;
+            this.currentIndex = 0;
+        }
+        else if (Array.isArray(component)) {
+            this.tokens = component as Token[];
             this.currentIndex = 0;
         }
 
@@ -286,6 +330,23 @@ export class SqlAstBuilder {
             },
             "EXCEPT": () => handleClause("EXCEPT", undefined, ["UNION", "EXCEPT", "INTERSECT", "ORDER", "LIMIT", "OFFSET", ";"]),
             "INTERSECT": () => handleClause("INTERSECT", undefined, ["UNION", "EXCEPT", "INTERSECT", "ORDER", "LIMIT", "OFFSET", ";"]),
+            "ALTER": () => handleClause("ALTER", undefined, [";"]),
+            "DROP": () => handleClause("DROP", undefined, [";"]),
+            "CREATE": () => handleClause("CREATE", undefined, [";"]),
+            "TRUNCATE": () => handleClause("TRUNCATE", undefined, [";"]),
+            "RENAME": () => handleClause("RENAME", undefined, [";"]),
+            "DESCRIBE": () => handleClause("DESCRIBE", undefined, [";"]),
+            "SHOW": () => handleClause("SHOW", undefined, [";"]),
+            "EXPLAIN": () => handleClause("EXPLAIN", undefined, [";"]),
+            "CALL": () => handleClause("CALL", undefined, [";"]),
+            "LOCK": () => handleClause("LOCK", undefined, [";"]),
+            "UNLOCK": () => handleClause("UNLOCK", undefined, [";"]),
+            "COMMIT": () => handleClause("COMMIT", undefined, [";"]),
+            "ROLLBACK": () => handleClause("ROLLBACK", undefined, [";"]),
+            "SAVEPOINT": () => handleClause("SAVEPOINT", undefined, [";"]),
+            "START": () => handleClause("START", undefined, [";"]),
+            "UPSERT": () => handleClause("UPSERT", undefined, [";"]),
+            "MERGE": () => handleClause("MERGE", undefined, [";"]),
         };
 
         while (this.getCurrentToken()) {
@@ -414,7 +475,7 @@ export class SqlAstBuilder {
         const statementTokens = this.tokens.slice(startIndex, endIndex);
 
         // Dodaj statement jako osobny komponent
-        components.push(this.prepareComponent("STATEMENT", statementTokens));
+        components.push(this.prepareComponent("SELECT_STATEMENT", statementTokens));
 
         this.processLevel(components);
 
@@ -620,7 +681,7 @@ export class SqlAstBuilder {
                     this.consumeToken()!; // Konsumuj otwierający nawias
                     if (this.getCurrentToken()?.value.toUpperCase() === "SELECT") {
                         const statement = this.consumeUntil([")"]);
-                        components.push(this.prepareComponent("STATEMENT", statement));
+                        components.push(this.prepareComponent("SELECT_STATEMENT", statement));
                     }
                     else {
                         const expressionTokens = this.consumeUntil([")"]);
@@ -792,8 +853,8 @@ export class SqlAstBuilder {
             components.push(this.prepareComponent("FIELDS", declarationTokens));
         }
 
-        if (sourceTokens.length > 1 && 
-            sourceTokens[sourceTokens.length - 1].type === "identifier" && 
+        if (sourceTokens.length > 1 &&
+            sourceTokens[sourceTokens.length - 1].type === "identifier" &&
             sourceTokens[sourceTokens.length - 2].value !== "."
         ) {
             const identifierToken = sourceTokens[sourceTokens.length - 1];
@@ -826,7 +887,7 @@ export class SqlAstBuilder {
                     this.currentIndex = 0;
                     this.consumeToken(); // Konsumuj otwierający nawias
                     const statement = this.consumeUntil([")"]);
-                    components.unshift(this.prepareComponent("STATEMENT", statement));
+                    components.unshift(this.prepareComponent("SELECT_STATEMENT", statement));
                 }
                 else if (sourceTokens[0].type === "identifier") {
                     const identifierTokens = [sourceTokens[0]];
@@ -871,7 +932,7 @@ export class SqlAstBuilder {
             "WITH": (component) => this.splitWith(component),
             "CTE": (component) => this.splitCte(component),
             "CTE RECURSIVE": (component) => this.splitCte(component),
-            "STATEMENT": (component) => this.splitStatement(component),
+            "SELECT_STATEMENT": (component) => this.splitStatement(component),
             "SELECT": (component) => this.splitSelect(component),
             "SELECT DISTINCT": (component) => this.splitSelect(component),
             "COLUMN": (component) => this.splitColumn(component),
@@ -914,13 +975,68 @@ export class SqlAstBuilder {
         return this.errors;
     }
 
-    build(tokens: Token[]): AstComponent | null {
+    build(tokens: Token[]): AstComponent[] | null {
         this.tokens = tokens;
         this.currentIndex = 0;
         this.errors = [];
         this.sequence = 0;
 
-        const components = this.splitStatement();
-        return this.prepareComponent("STATEMENT", tokens, components);
+        return this.splitStatements();
+    }
+
+    detect(tokens: Token[]): { 
+        batch: boolean, 
+        type: DetectStatementType, 
+    } | null {
+        const components = this.build(tokens) ?? [];
+        
+        if (components.length === 0) {
+            return null;
+        }
+
+        const batch = components.length > 1;
+        let type: DetectStatementType | undefined = undefined;
+
+        for (const component of components) {
+            if (component.component === "SELECT_STATEMENT") {
+                if (type === undefined) {
+                    type = "SELECT";
+                }
+                else if (type !== "SELECT") {
+                    type = "MIXED";
+                }
+            }
+            else if (component.component === "DML_STATEMENT") {
+                if (type === undefined) {
+                    type = "DML";
+                }
+                else if (type !== "DML") {
+                    type = "MIXED";
+                }
+            }
+            else if (component.component === "DDL_STATEMENT") {
+                if (type === undefined) {
+                    type = "DDL";
+                }
+                else if (type !== "DDL") {
+                    type = "MIXED";
+                }
+            }
+            else if (component.component === "TRANSACTION_STATEMENT") {
+                // ignore
+            }
+            else {
+                if (type === undefined) {
+                    type = "UNKNOWN";
+                }
+                else if (type !== "UNKNOWN") {
+                    type = "MIXED";
+                }
+            }
+        }
+        return {
+            batch: batch,
+            type: type!,
+        };
     }
 }

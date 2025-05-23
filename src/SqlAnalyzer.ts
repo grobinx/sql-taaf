@@ -1,6 +1,6 @@
 import { AstComponent } from "./SqlAstBuilder";
 
-export type RelationType = "relation" | "cte" | "statement" | "function";
+export type RelationType = "relation" | "cte" | "select_statement" | "function";
 
 export interface Relation {
     /**
@@ -127,7 +127,7 @@ export class SqlAnalyzer {
 
     private resolveCteRelation(source: AstComponent, cteName: string): AstComponent | undefined {
         const depends = this.findDependency(source);
-        const statements = depends.filter(c => c.component === "STATEMENT");
+        const statements = depends.filter(c => c.component === "SELECT_STATEMENT");
         if (statements.length) {
             for (const statement of statements) {
                 const withComponent = statement.components?.find(c => c.component === "WITH");
@@ -149,11 +149,11 @@ export class SqlAnalyzer {
     private resolveRelation(source: AstComponent): Relation | undefined {
         const alias = source.components?.find(c => c.component === "NAME");
 
-        const statement = source.components?.find(c => c.component === "STATEMENT");
+        const statement = source.components?.find(c => c.component === "SELECT_STATEMENT");
         if (statement) {
             const alias = source.components?.find(c => c.component === "NAME");
             return {
-                type: "statement",
+                type: "select_statement",
                 alias: alias ? alias.tokens[0].value : undefined,
                 component: source,
                 dependComponent: statement,
@@ -203,7 +203,7 @@ export class SqlAnalyzer {
         const relations: Relation[] = [];
 
         const search = (component: AstComponent) => {
-            if (component.component === "STATEMENT") {
+            if (component.component === "SELECT_STATEMENT") {
                 const statement = component;
                 const from = statement.components?.find(c => c.component === "FROM");
                 if (from) {
@@ -248,7 +248,7 @@ export class SqlAnalyzer {
                     continue;
                 }
             }
-            if (r.type === "statement" && r.dependComponent) {
+            if (r.type === "select_statement" && r.dependComponent) {
                 const columns = this.extractStatementColumns(r.dependComponent, r);
                 if (columns) {
                     result.push(...columns);
@@ -265,7 +265,7 @@ export class SqlAnalyzer {
                         continue;
                     }
                 }
-                const statement = r.dependComponent?.components?.find(c => c.component === "STATEMENT");
+                const statement = r.dependComponent?.components?.find(c => c.component === "SELECT_STATEMENT");
                 if (statement) {
                     const columns = this.extractStatementColumns(statement, r);
                     if (columns) {
@@ -328,7 +328,7 @@ export class SqlAnalyzer {
         const relations: Relation[] = [];
 
         for (const component of stack) {
-            if (component.component === "STATEMENT") {
+            if (component.component === "SELECT_STATEMENT") {
                 const statement = component;
                 const from = statement.components?.find(c => c.component === "FROM");
                 if (from) {
@@ -446,7 +446,7 @@ export class SqlAnalyzer {
                 });
 
                 for (const component of stack.slice(1)) {
-                    if (component.component === "STATEMENT") {
+                    if (component.component === "SELECT_STATEMENT") {
                         const from = component.components?.find(c => c.component === "FROM");
                         if (from) {
                             const sources = from.components?.filter(c => c.component === "SOURCE");
