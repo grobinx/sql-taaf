@@ -26,6 +26,7 @@ The project was created for the DBORG project (the younger brother of ORBADA ava
 - **Description**: A class that builds an Abstract Syntax Tree (AST) based on SQL tokens.
 - **Features**:
   - Creates a tree structure representing the SQL query.
+  - Detect batch statement, select, ddl, dml or mixed.
   - Currently supports only SELECT statements.
   - Divides the query into parts using standard-compliant keywords at a minimal level required to find basic information such as columns, relations, and subqueries.
   - Does not validate the correctness of the query.
@@ -54,8 +55,8 @@ The project was created for the DBORG project (the younger brother of ORBADA ava
   const ast = astBuilder.build(tokens);
 
   if (ast) {
-      const analyzer = new SqlAnalyzer(ast);
-      console.log(analyzer.findUsedRelations()); // Displays used relations
+      const analyzer = new SqlAnalyzer();
+      console.log(analyzer.findUsedRelations(ast)); // Displays used relations
   }
   ```
 
@@ -111,7 +112,7 @@ select schema_name, table_name, owner_name, table_space, description, accessible
 - [Tokens JSON](doc/tokens.json)
 - [AST JSON (without tokens)](doc/ast.json)
 
-`analyzer.findUsedRelations()`
+`analyzer.findUsedRelations(ast)`
 ```json
 [
   {
@@ -177,7 +178,7 @@ select schema_name, table_name, owner_name, table_space, description, accessible
   }
 ]
 ```
-`analyzer.findRelationsAt(1010)`
+`analyzer.findRelationsAt(ast, 1010)`
 ```sql
 when pg_catalog.has_table_privilege(c.oid, 'SELECT, INSERT, UPDATE, DELETE') then 'GRANTED' 
                                              ^
@@ -216,7 +217,7 @@ when pg_catalog.has_table_privilege(c.oid, 'SELECT, INSERT, UPDATE, DELETE') the
   }
 ]
 ```
-`analyzer.resolveRelationColumns(...analyzer.findRelationsAt(1010))`
+`analyzer.resolveRelationColumns(...analyzer.findRelationsAt(ast, 1010))`
 ```json
 [
   {
