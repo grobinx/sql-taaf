@@ -145,7 +145,6 @@ export class SqlAstBuilder {
             ')': '(',
             '}': '{',
             ']': '[',
-            '>': '<',
             'END': 'CASE',
         };
 
@@ -241,13 +240,13 @@ export class SqlAstBuilder {
         for (const tokens of componentTokens) {
             const statement = this.splitStatement(tokens);
 
-            if (statement.some(c => ["SELECT"].includes(c.component))) {
+            if (statement.some(c => ["SELECT", "SHOW", "HELP", "STATUS", "DESCRIBE", "PRAGMA"].includes(c.component))) {
                 components.push(this.prepareComponent("SELECT_STATEMENT", tokens, statement));
             } else if (statement.some(c => ["DELETE", "UPDATE", "INSERT", "MERGE", "UPSERT", "LOCK", "UNLOCK", "TRUNCATE"].includes(c.component))) {
                 components.push(this.prepareComponent("DML_STATEMENT", tokens, statement));
-            } else if (statement.some(c => ["CREATE", "DROP", "ALTER", "RENAME"].includes(c.component))) {
+            } else if (statement.some(c => ["CREATE", "DROP", "ALTER", "RENAME", "COMMENT", "GRANT", "REVOKE"].includes(c.component))) {
                 components.push(this.prepareComponent("DDL_STATEMENT", tokens, statement));
-            } else if (statement.some(c => ["SHOW", "EXPLAIN", "CALL"].includes(c.component))) {
+            } else if (statement.some(c => ["SHOW", "EXPLAIN", "CALL", "VACUUM", "ANALYZE", "CHECK"].includes(c.component))) {
                 components.push(this.prepareComponent("UTILITY_STATEMENT", tokens, statement));
             } else if (statement.some(c => ["COMMIT", "ROLLBACK", "SAVEPOINT", "START"].includes(c.component))) {
                 components.push(this.prepareComponent("TRANSACTION_STATEMENT", tokens, statement));
@@ -343,6 +342,14 @@ export class SqlAstBuilder {
             "START": () => handleClause("START", undefined, [";"]),
             "UPSERT": () => handleClause("UPSERT", undefined, [";"]),
             "MERGE": () => handleClause("MERGE", undefined, [";"]),
+            "VACUUM": () => handleClause("VACUUM", undefined, [";"]),
+            "ANALYZE": () => handleClause("ANALYZE", undefined, [";"]),
+            "CHECK": () => handleClause("CHECK", undefined, [";"]),
+            "HELP": () => handleClause("HELP", undefined, [";"]),
+            "STATUS": () => handleClause("STATUS", undefined, [";"]),
+            "GRANT": () => handleClause("GRANT", undefined, [";"]),
+            "REVOKE": () => handleClause("REVOKE", undefined, [";"]),
+            "COMMENT": () => handleClause("COMMENT", undefined, [";"]),
         };
 
         while (this.getCurrentToken()) {
