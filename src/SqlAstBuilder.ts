@@ -1,7 +1,7 @@
 import { Position, Token } from "./SqlTokenizer";
 
 const joinSeparators = ["JOIN", "LEFT", "RIGHT", "FULL", "INNER", "OUTER", "CROSS", "NATURAL", "LATERAL", ","];
-export type DetectStatementType = "SELECT" | "DML" | "DDL" | "MIXED" | "UNKNOWN";
+export type DetectStatementType = "SELECT" | "DML" | "DDL" | "TRANSACTION" | "MIXED" | "UNKNOWN";
 
 export interface AstComponent {
     id: number;
@@ -1007,7 +1007,7 @@ export class SqlAstBuilder {
                 }
             }
             else if (component.component === "DML_STATEMENT") {
-                if (type === undefined) {
+                if (type === undefined || type === "TRANSACTION") {
                     type = "DML";
                 }
                 else if (type !== "DML") {
@@ -1015,7 +1015,7 @@ export class SqlAstBuilder {
                 }
             }
             else if (component.component === "DDL_STATEMENT") {
-                if (type === undefined) {
+                if (type === undefined || type === "TRANSACTION") {
                     type = "DDL";
                 }
                 else if (type !== "DDL") {
@@ -1023,7 +1023,10 @@ export class SqlAstBuilder {
                 }
             }
             else if (component.component === "TRANSACTION_STATEMENT") {
-                // ignore
+                if (type === undefined) {
+                    type = "TRANSACTION";
+                }
+                // else ignore
             }
             else {
                 if (type === undefined) {
