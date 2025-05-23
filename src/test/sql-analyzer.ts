@@ -87,17 +87,17 @@ sql = `select schema_name, table_name, owner_name, table_space, description, acc
 //           join omn.v_leki AS b USING(blz7)
 //          where b.nrok = 2020 and b.mies = 12`
 
-sql = `drop table if exists auth.user_sessions;
-create table auth.user_sessions (
-  uss_id varchar default gen_random_uuid() primary key,
-  uss_created timestamp default clock_timestamp() not null,
-  uss_updated timestamp default clock_timestamp() not null,
-  uss_version bigint default 1 not null,
-  uss_usr_id varchar not null references auth.users (usr_i) on delete cascade,
-  uss_dpt_code varchar not null,
-  uss_expires timestamp not null,
-  uss_ended timestamp
-);`
+// sql = `drop table if exists auth.user_sessions;
+// create table auth.user_sessions (
+//   uss_id varchar default gen_random_uuid() primary key,
+//   uss_created timestamp default clock_timestamp() not null,
+//   uss_updated timestamp default clock_timestamp() not null,
+//   uss_version bigint default 1 not null,
+//   uss_usr_id varchar not null references auth.users (usr_i) on delete cascade,
+//   uss_dpt_code varchar not null,
+//   uss_expires timestamp not null,
+//   uss_ended timestamp
+// );`
 
 const parser = new SqlTokenizer();
 const tokens = parser.parse(sql);
@@ -105,25 +105,26 @@ const tokens = parser.parse(sql);
 const builder = new SqlAstBuilder();
 const ast = builder.build(tokens);
 
+const analyzer = new SqlAnalyzer();
 if (ast) {
-    const analyzer = new SqlAnalyzer(ast[0]);
     // console.log(analyzer.findDependencyAt(410));
     console.log('Used relations:');
-    let relations = analyzer.findUsedRelations();
+    let relations = analyzer.findUsedRelations(ast[0]);
     console.log(relations);
     console.log('Relations columns:');
     console.log(analyzer.resolveRelationColumns(...relations));
     console.log('Relations at:');
-    relations = analyzer.findRelationsAt(246);
+    relations = analyzer.findRelationsAt(ast[0], 246);
     console.log(relations);
     console.log('Relations columns at:');
     console.log(analyzer.resolveRelationColumns(...relations));
     console.log('Identifier at:');
-    console.log(analyzer.findIdentifierAt(23));
+    console.log(analyzer.findIdentifierAt(ast[0], 23));
     console.log('Belongs to:');
-    console.log(analyzer.belongsToAt(1196));
+    console.log(analyzer.belongsToAt(ast[0], 1196));
     console.log('Comes from:');
-    console.log(analyzer.comesFromAt(442));
+    console.log(analyzer.comesFromAt(ast[0], 442));
+    console.log(analyzer.detect(ast));
 } else {
     console.error('AST is null. Cannot analyze.');
 }
@@ -146,7 +147,6 @@ function removeTokensFromAst(ast: any): any {
 }
 
 console.log(ast);
-console.log(builder.detect(tokens));
 //fs.writeFileSync('doc/tokens.json', JSON.stringify(tokens, null, 2));
 //fs.writeFileSync('doc/ast.json', JSON.stringify(removeTokensFromAst(ast), null, 2));
 

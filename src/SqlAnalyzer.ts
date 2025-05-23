@@ -1,6 +1,7 @@
 import { AstComponent } from "./SqlAstBuilder";
 
 export type RelationType = "relation" | "cte" | "select_statement" | "function";
+export type DetectStatementType = "SELECT" | "DML" | "DDL" | "TRANSACTION" | "MIXED" | "UNKNOWN";
 
 export interface Relation {
     /**
@@ -52,12 +53,6 @@ export type Stack = StackElement[];
 
 export class SqlAnalyzer {
 
-    private ast: AstComponent;
-
-    constructor(ast: AstComponent) {
-        this.ast = ast
-    }
-
     private identEqual(a: string | undefined | null, b: string | undefined | null): boolean {
         if (a && b) {
             if ((a.length && a[0] === '"' && a[a.length - 1] === '"') ||
@@ -74,7 +69,7 @@ export class SqlAnalyzer {
      * @param index - index of position in the SQL statement
      * @returns Tablica komponentów AST, które są zależne od danej pozycji.
      */
-    private findDependencyAt(index: number): AstComponent[] {
+    private findDependencyAt(ast: AstComponent, index: number): AstComponent[] {
         const result: AstComponent[] = [];
 
         const search = (component: AstComponent) => {
@@ -95,12 +90,12 @@ export class SqlAnalyzer {
         };
 
         // Rozpocznij przeszukiwanie od korzenia AST
-        search(this.ast);
+        search(ast);
 
         return result;
     }
 
-    private findDependency(component: AstComponent): AstComponent[] {
+    private findDependency(ast: AstComponent, component: AstComponent): AstComponent[] {
         const stack: AstComponent[] = [];
 
         const search = (current: AstComponent): boolean => {
@@ -121,12 +116,12 @@ export class SqlAnalyzer {
             return false;
         };
 
-        search(this.ast); // Rozpocznij przeszukiwanie od korzenia AST
+        search(ast); // Rozpocznij przeszukiwanie od korzenia AST
         return stack;
     }
 
-    private resolveCteRelation(source: AstComponent, cteName: string): AstComponent | undefined {
-        const depends = this.findDependency(source);
+    private resolveCteRelation(ast: AstComponent, source: AstComponent, cteName: string): AstComponent | undefined {
+        const depends = this.findDependency(ast, source);
         const statements = depends.filter(c => c.component === "SELECT_STATEMENT");
         if (statements.length) {
             for (const statement of statements) {
@@ -146,7 +141,7 @@ export class SqlAnalyzer {
         }
     }
 
-    private resolveRelation(source: AstComponent): Relation | undefined {
+    private resolveRelation(ast: AstComponent, source: AstComponent): Relation | undefined {
         const alias = source.components?.find(c => c.component === "NAME");
 
         const statement = source.components?.find(c => c.component === "SELECT_STATEMENT");
@@ -164,7 +159,7 @@ export class SqlAnalyzer {
         if (relation) {
             const parts = relation.tokens.filter(t => t.type === "identifier").map(t => t.value);
             if (parts.length === 1) {
-                const cte = this.resolveCteRelation(source, parts[0]);
+                const cte = this.resolveCteRelation(ast, source, parts[0]);
                 if (cte) {
                     return {
                         type: "cte",
@@ -199,7 +194,7 @@ export class SqlAnalyzer {
      * 
      * @returns Zwraca wszystkie relacje w zapytaniu SQL.
      */
-    findUsedRelations(): Relation[] {
+    findUsedRelations(ast: AstComponent): Relation[] {
         const relations: Relation[] = [];
 
         const search = (component: AstComponent) => {
@@ -210,7 +205,7 @@ export class SqlAnalyzer {
                     const sources = from.components?.filter(c => c.component === "SOURCE");
                     if (sources) {
                         for (const source of sources) {
-                            const relation = this.resolveRelation(source);
+                            const relation = this.resolveRelation(ast, source);
                             if (relation) {
                                 relations.push(relation);
                             }
@@ -224,7 +219,7 @@ export class SqlAnalyzer {
             }
         };
 
-        search(this.ast);
+        search(ast);
         return relations;
     }
 
@@ -323,8 +318,8 @@ export class SqlAnalyzer {
      * @param index - index of position in the SQL statement
      * @returns An array of relations found on stack at the given index
      */
-    findRelationsAt(index: number): Relation[] {
-        const stack = this.findDependencyAt(index);
+    findRelationsAt(ast: AstComponent, index: number): Relation[] {
+        const stack = this.findDependencyAt(ast, index);
         const relations: Relation[] = [];
 
         for (const component of stack) {
@@ -335,7 +330,7 @@ export class SqlAnalyzer {
                     const sources = from.components?.filter(c => c.component === "SOURCE");
                     if (sources) {
                         for (const source of sources) {
-                            const relation = this.resolveRelation(source);
+                            const relation = this.resolveRelation(ast, source);
                             if (relation) {
                                 relations.push(relation);
                             }
@@ -354,8 +349,8 @@ export class SqlAnalyzer {
      * @param index - index of position in the SQL statement
      * @returns 
      */
-    findIdentifierAt(index: number): Identifier | undefined {
-        const stack = this.findDependencyAt(index);
+    findIdentifierAt(ast: AstComponent, index: number): Identifier | undefined {
+        const stack = this.findDependencyAt(ast, index);
         if (stack.length) {
             if (stack[0].component === "IDENTIFIER" || stack[0].component === "NAME") {
                 // Find the token index in parts that matches the given index
@@ -385,8 +380,8 @@ export class SqlAnalyzer {
      * @param index - index of position in the SQL statement
      * @returns An array of components that the index belongs to
      */
-    belongsToAt(index: number): Stack | undefined {
-        const stack = this.findDependencyAt(index);
+    belongsToAt(ast: AstComponent, index: number): Stack | undefined {
+        const stack = this.findDependencyAt(ast, index);
         if (stack.length) {
             const result: Stack = [];
             for (const component of stack) {
@@ -411,7 +406,7 @@ export class SqlAnalyzer {
                         }
                     });
                 } else if (component.component === "SOURCE") {
-                    const relation = this.resolveRelation(component);
+                    const relation = this.resolveRelation(ast, component);
                     if (relation) {
                         result.push({
                             type: "relation",
@@ -430,8 +425,8 @@ export class SqlAnalyzer {
      * @param index - index of position in the SQL statement
      * @returns 
      */
-    comesFromAt(index: number): Stack | undefined {
-        const stack = this.findDependencyAt(index);
+    comesFromAt(ast: AstComponent, index: number): Stack | undefined {
+        const stack = this.findDependencyAt(ast, index);
         if (stack.length) {
             const result: Stack = [];
             if (stack[0].component === "IDENTIFIER") {
@@ -452,7 +447,7 @@ export class SqlAnalyzer {
                             const sources = from.components?.filter(c => c.component === "SOURCE");
                             if (sources) {
                                 for (const source of sources) {
-                                    const relation = this.resolveRelation(source);
+                                    const relation = this.resolveRelation(ast, source);
                                     if (relation && relation.alias === parts[0]) {
                                         result.push({
                                             type: "relation",
@@ -468,6 +463,63 @@ export class SqlAnalyzer {
             }
             return result;
         }
+    }
+
+    detect(components: AstComponent[]): { 
+        batch: boolean, 
+        type: DetectStatementType, 
+    } | null {
+        if (components.length === 0) {
+            return null;
+        }
+
+        const batch = components.length > 1;
+        let type: DetectStatementType | undefined = undefined;
+
+        for (const component of components) {
+            if (component.component === "SELECT_STATEMENT") {
+                if (type === undefined) {
+                    type = "SELECT";
+                }
+                else if (type !== "SELECT") {
+                    type = "MIXED";
+                }
+            }
+            else if (component.component === "DML_STATEMENT") {
+                if (type === undefined || type === "TRANSACTION") {
+                    type = "DML";
+                }
+                else if (type !== "DML") {
+                    type = "MIXED";
+                }
+            }
+            else if (component.component === "DDL_STATEMENT") {
+                if (type === undefined || type === "TRANSACTION") {
+                    type = "DDL";
+                }
+                else if (type !== "DDL") {
+                    type = "MIXED";
+                }
+            }
+            else if (component.component === "TRANSACTION_STATEMENT") {
+                if (type === undefined) {
+                    type = "TRANSACTION";
+                }
+                // else ignore
+            }
+            else {
+                if (type === undefined) {
+                    type = "UNKNOWN";
+                }
+                else if (type !== "UNKNOWN") {
+                    type = "MIXED";
+                }
+            }
+        }
+        return {
+            batch: batch,
+            type: type!,
+        };
     }
 
 }

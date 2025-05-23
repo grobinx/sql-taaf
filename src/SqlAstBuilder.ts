@@ -1,7 +1,6 @@
 import { Position, Token } from "./SqlTokenizer";
 
 const joinSeparators = ["JOIN", "LEFT", "RIGHT", "FULL", "INNER", "OUTER", "CROSS", "NATURAL", "LATERAL", ","];
-export type DetectStatementType = "SELECT" | "DML" | "DDL" | "TRANSACTION" | "MIXED" | "UNKNOWN";
 
 export interface AstComponent {
     id: number;
@@ -982,64 +981,5 @@ export class SqlAstBuilder {
         this.sequence = 0;
 
         return this.splitStatements();
-    }
-
-    detect(tokens: Token[]): { 
-        batch: boolean, 
-        type: DetectStatementType, 
-    } | null {
-        const components = this.build(tokens) ?? [];
-        
-        if (components.length === 0) {
-            return null;
-        }
-
-        const batch = components.length > 1;
-        let type: DetectStatementType | undefined = undefined;
-
-        for (const component of components) {
-            if (component.component === "SELECT_STATEMENT") {
-                if (type === undefined) {
-                    type = "SELECT";
-                }
-                else if (type !== "SELECT") {
-                    type = "MIXED";
-                }
-            }
-            else if (component.component === "DML_STATEMENT") {
-                if (type === undefined || type === "TRANSACTION") {
-                    type = "DML";
-                }
-                else if (type !== "DML") {
-                    type = "MIXED";
-                }
-            }
-            else if (component.component === "DDL_STATEMENT") {
-                if (type === undefined || type === "TRANSACTION") {
-                    type = "DDL";
-                }
-                else if (type !== "DDL") {
-                    type = "MIXED";
-                }
-            }
-            else if (component.component === "TRANSACTION_STATEMENT") {
-                if (type === undefined) {
-                    type = "TRANSACTION";
-                }
-                // else ignore
-            }
-            else {
-                if (type === undefined) {
-                    type = "UNKNOWN";
-                }
-                else if (type !== "UNKNOWN") {
-                    type = "MIXED";
-                }
-            }
-        }
-        return {
-            batch: batch,
-            type: type!,
-        };
     }
 }
