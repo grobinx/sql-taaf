@@ -79,13 +79,14 @@ sql = `select schema_name, table_name, owner_name, table_space, description, acc
 //        join pg_catalog.pg_namespace ns on ns.oid = p.pronamespace
 //  order by function_name
 // `
-// sql = `select b.blz7, b.mhid, b.nmid, a.nazwa_leku AS nazw
-//           from (select *
-//                   from public.dblink(get_autonomous_auth_host('abdpgmaster1'::text), 
-//                     'select blz7, nale||'' ''||napo||'' ''||nada||'' ''||naop as nazwa_leku 
-//                        from bloz.v_pg_omn_nazw_leki') as t (blz7 integer, nazwa_leku text)) AS a
-//           join omn.v_leki AS b USING(blz7)
-//          where b.nrok = 2020 and b.mies = 12`
+
+sql = `select b.blz7, b.mhid, b.nmid, a.nazwa_leku AS nazw
+          from (select *
+                  from public.dblink(get_autonomous_auth_host('abdpgmaster1'::text), 
+                    'select blz7, nale||'' ''||napo||'' ''||nada||'' ''||naop as nazwa_leku 
+                       from bloz.v_pg_omn_nazw_leki') as t (blz7 integer, nazwa_leku text)) AS a
+          join omn.v_leki AS b USING(blz7)
+         where b.nrok = 2020 and b.mies > 12`
 
 // sql = `drop table if exists auth.user_sessions;
 // create table auth.user_sessions (

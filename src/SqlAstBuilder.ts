@@ -62,7 +62,7 @@ export class SqlAstBuilder {
 
     /**
      * Konsumuje tokeny aż do napotkania jednego z określonych znaków końca,
-     * uwzględniając zagnieżdżone nawiasy różnych typów: (), {}, [], <>.
+     * uwzględniając zagnieżdżone nawiasy różnych typów: (), {}, [].
      * @param endTokens Znaki końca, np. [',', ')']
      * @returns Tablica skonsumowanych tokenów
      */
@@ -73,7 +73,6 @@ export class SqlAstBuilder {
             '(': ')',
             '{': '}',
             '[': ']',
-            '<': '>',
             'CASE': 'END',
         };
 
@@ -97,7 +96,6 @@ export class SqlAstBuilder {
                             message: `Nieoczekiwany zamykający nawias: ${value}`,
                             position: currentToken,
                         });
-                        return tokens; // Zakończ analizę
                     }
                 }
                 // Usuń pasujący otwierający nawias ze stosu
@@ -108,7 +106,6 @@ export class SqlAstBuilder {
                         message: `Nieoczekiwany zamykający nawias: ${value}`,
                         position: currentToken,
                     });
-                    return tokens; // Zakończ analizę
                 }
             }
             // Jeśli napotkano znak końca i stos jest pusty, zakończ
