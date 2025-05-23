@@ -350,6 +350,7 @@ export class SqlAstBuilder {
             "GRANT": () => handleClause("GRANT", undefined, [";"]),
             "REVOKE": () => handleClause("REVOKE", undefined, [";"]),
             "COMMENT": () => handleClause("COMMENT", undefined, [";"]),
+            "PRAGMA": () => handleClause("PRAGMA", undefined, [";"]),
         };
 
         while (this.getCurrentToken()) {
