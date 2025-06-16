@@ -463,6 +463,14 @@ export class SqlAstBuilder {
             this.consumeToken(); // Konsumuj "AS"
         }
 
+        while (this.getCurrentToken()) {
+            const token = this.getCurrentToken();
+            if (token && token.value === "(") {
+                break;
+            }
+            this.consumeToken();
+        }
+
         // Zakładamy, że pozostałe tokeny są ograniczone nawiasami
         const startIndex = this.currentIndex + 1; // Pomijamy otwierający nawias
         const endIndex = this.tokens.length - 1; // Pomijamy zamykający nawias
