@@ -617,7 +617,7 @@ export class SqlAstBuilder {
         return components.length > 0 ? components : null;
     }
 
-    splitValues(component: AstComponent): AstComponent[] | null {
+    splitValues(component: AstComponent, processLevel: boolean = false): AstComponent[] | null {
         this.tokens = component.tokens;
         this.currentIndex = 0;
 
@@ -638,7 +638,9 @@ export class SqlAstBuilder {
             }
         }
 
-        this.processLevel(components);
+        if (processLevel) {
+            this.processLevel(components);
+        }
 
         return components.length > 0 ? components : null;
     }
@@ -722,7 +724,7 @@ export class SqlAstBuilder {
             } else if (currentToken.value === ",") {
                 // Jeśli napotkano przecinek, musimy zignorować to co do tej pory
                 // zrobiliśmy i zbudować go na nowo i zmienić na "VALUES" bo to nie jest już EXPRESSION
-                const values = this.splitValues(component);
+                const values = this.splitValues(component, false);
                 component.component = "VALUES";
                 components = values ?? [];
                 identifierTokens = []; // Resetuj tokeny identyfikatora

@@ -100,6 +100,8 @@ ORDER BY data
 //   uss_ended timestamp
 // );`
 
+sql = 'select [{"hours":1,"minutes":25},{"days":1,"hours":1,"minutes":1}]';
+
 const parser = new SqlTokenizer();
 const tokens = parser.parse(sql);
 
